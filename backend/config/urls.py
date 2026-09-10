@@ -11,6 +11,33 @@ from drf_spectacular.views import (
 )
 
 
+class RootView(APIView):
+    """
+    Root endpoint directing clients to documentation, health, and API services.
+    """
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request):
+        return Response({
+            "service": "MorningBrief API",
+            "version": "1.0.0",
+            "status": "online",
+            "timestamp": timezone.now().isoformat(),
+            "endpoints": {
+                "health": "/api/v1/health/",
+                "docs": "/api/v1/docs/",
+                "redoc": "/api/v1/redoc/",
+                "schema": "/api/v1/schema/",
+                "auth": "/api/v1/auth/",
+                "digests": "/api/v1/digests/",
+                "connections": "/api/v1/connections/",
+                "ingestor": "/api/v1/ingestor/",
+                "delivery": "/api/v1/delivery/",
+            },
+            "frontend_app": "http://localhost:5173",
+        })
+
+
 class HealthCheckView(APIView):
     """
     Health check endpoint returning 200 OK and service metadata.
@@ -27,7 +54,9 @@ class HealthCheckView(APIView):
 
 
 urlpatterns = [
+    path('', RootView.as_view(), name='api_root'),
     path('admin/', admin.site.urls),
+
 
     # Health Check
     path('api/v1/health/', HealthCheckView.as_view(), name='health_check'),
