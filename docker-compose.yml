@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: morningbrief_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-morningbrief}
+      POSTGRES_USER: ${POSTGRES_USER:-morningbrief}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-morningbrief_secret_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-morningbrief} -d ${POSTGRES_DB:-morningbrief}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: morningbrief_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: morningbrief_backend
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py migrate &&
+             daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+    ports:
+      - "8000:8000"
+    environment:
+      DEBUG: "${DEBUG:-True}"
+      SECRET_KEY: "${SECRET_KEY:-django-insecure-morningbrief-docker-secret-key}"
+      ALLOWED_HOSTS: "${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-morningbrief}:${POSTGRES_PASSWORD:-morningbrief_secret_password}@db:5432/${POSTGRES_DB:-morningbrief}"
+      REDIS_URL: "redis://redis:6379/0"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://localhost:80}"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: morningbrief_celery_worker
+    restart: unless-stopped
+    command: celery -A config worker -l info
+    environment:
+      DEBUG: "${DEBUG:-True}"
+      SECRET_KEY: "${SECRET_KEY:-django-insecure-morningbrief-docker-secret-key}"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-morningbrief}:${POSTGRES_PASSWORD:-morningbrief_secret_password}@db:5432/${POSTGRES_DB:-morningbrief}"
+      REDIS_URL: "redis://redis:6379/0"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: morningbrief_celery_beat
+    restart: unless-stopped
+    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    environment:
+      DEBUG: "${DEBUG:-True}"
+      SECRET_KEY: "${SECRET_KEY:-django-insecure-morningbrief-docker-secret-key}"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-morningbrief}:${POSTGRES_PASSWORD:-morningbrief_secret_password}@db:5432/${POSTGRES_DB:-morningbrief}"
+      REDIS_URL: "redis://redis:6379/0"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: morningbrief_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
