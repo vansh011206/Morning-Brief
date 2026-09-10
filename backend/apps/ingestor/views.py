@@ -11,7 +11,14 @@ class RawItemListView(generics.ListAPIView):
     serializer_class = RawItemSerializer
 
     def get_queryset(self):
-        return RawItem.objects.filter(connection__user=self.request.user)
+        qs = RawItem.objects.filter(user=self.request.user).select_related('connection').order_by('-received_at')
+        connection_id = self.request.query_params.get('connection_id')
+        if connection_id:
+            qs = qs.filter(connection_id=connection_id)
+        limit = self.request.query_params.get('limit')
+        if limit and limit.isdigit():
+            return qs[:int(limit)]
+        return qs[:100]
 
 
 class RawItemDetailView(generics.RetrieveAPIView):
@@ -22,4 +29,4 @@ class RawItemDetailView(generics.RetrieveAPIView):
     serializer_class = RawItemSerializer
 
     def get_queryset(self):
-        return RawItem.objects.filter(connection__user=self.request.user)
+        return RawItem.objects.filter(user=self.request.user).select_related('connection')

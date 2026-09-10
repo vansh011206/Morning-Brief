@@ -59,15 +59,39 @@ export interface PreferencesPayload {
 
 export interface Connection {
   id: number
-  provider: 'gmail' | 'github' | 'telegram' | 'calendar'
+  provider: 'rss' | 'gmail' | 'github' | 'telegram' | 'calendar'
   provider_display: string
-  account_email: string
-  account_username: string
-  status: 'active' | 'expired' | 'error' | 'disconnected'
+  external_account: string
+  display_name: string
+  is_active: boolean
+  status: 'pending' | 'active' | 'error'
   status_display: string
-  last_synced_at: string | null
+  last_sync_at: string | null
+  last_error: string
+  total_items_7d: number
   created_at: string
   updated_at: string
+}
+
+export type RawItemType = 'news' | 'email' | 'pr' | 'event' | 'bill'
+
+export interface RawItem {
+  id: number
+  connection: number
+  connection_name: string
+  connection_provider: string
+  external_id: string
+  type: RawItemType
+  type_display: string
+  title: string
+  body_snippet: string
+  author: string
+  source_url: string
+  received_at: string
+  is_important: boolean | null
+  is_spam: boolean
+  feedback_score: number
+  created_at: string
 }
 
 export type PriorityLevel = 'critical' | 'high' | 'medium' | 'low'

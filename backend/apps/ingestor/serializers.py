@@ -3,22 +3,34 @@ from .models import RawItem
 
 
 class RawItemSerializer(serializers.ModelSerializer):
-    source_display = serializers.CharField(source='get_source_type_display', read_only=True)
+    type_display = serializers.CharField(source='get_type_display', read_only=True)
+    connection_name = serializers.CharField(source='connection.display_name', read_only=True)
+    connection_provider = serializers.CharField(source='connection.provider', read_only=True)
 
     class Meta:
         model = RawItem
         fields = [
             'id',
             'connection',
-            'source_type',
-            'source_display',
+            'connection_name',
+            'connection_provider',
             'external_id',
+            'type',
+            'type_display',
             'title',
-            'sender',
-            'recipient',
-            'snippet',
+            'body_snippet',
+            'author',
+            'source_url',
             'received_at',
-            'is_processed',
+            'is_important',
+            'is_spam',
+            'feedback_score',
             'created_at',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = [
+            'id',
+            'type_display',
+            'connection_name',
+            'connection_provider',
+            'created_at',
+        ]
