@@ -1,5 +1,5 @@
 from django.db import models
-from apps.digest.models import DailyDigest
+from apps.digest.models import Digest
 
 
 class DeliveryLog(models.Model):
@@ -16,7 +16,7 @@ class DeliveryLog(models.Model):
         FAILED = 'failed', 'Failed'
 
     digest = models.ForeignKey(
-        DailyDigest,
+        Digest,
         on_delete=models.CASCADE,
         related_name='deliveries'
     )

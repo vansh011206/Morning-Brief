@@ -1,0 +1,30 @@
+MORNINGBRIEF - DAILY DIGEST
+{{ formatted_date }} | {{ timezone_name }}
+{{ greeting }}, {{ user_first_name }}
+================================================================================
+{{ digest.item_count }} items synthesized{% if digest.important_count > 0 %} | {{ digest.important_count }} high priority{% endif %}
+View in web app: {{ frontend_url }}/today
+================================================================================
+
+{% for sec in sections %}
+=== {{ sec.title|upper }} ({{ sec.items|length }}) ===
+--------------------------------------------------------------------------------
+{% for item in sec.items %}
+[{{ forloop.counter }}] {{ item.source_title }}{% if item.priority == 'urgent' %} [URGENT]{% elif item.priority == 'high' %} [HIGH]{% endif %}
+Source: {{ item.source_name|default:"Feed Source" }}{% if item.author %} by {{ item.author }}{% endif %}
+Summary: {{ item.summary }}
+{% if item.source_url %}Link: {{ item.source_url }}{% endif %}
+
+{% endfor %}
+{% empty %}
+No items recorded for today.
+{% endfor %}
+
+================================================================================
+PREFERENCES & SETTINGS:
+- Digest Archive: {{ frontend_url }}/archive
+- Manage Preferences: {{ frontend_url }}/settings
+- One-click Unsubscribe: {{ unsubscribe_url }}
+
+You are receiving this daily briefing because digest delivery is enabled on your MorningBrief account.
+MorningBrief Inc. - Automated Personal Intelligence Engine

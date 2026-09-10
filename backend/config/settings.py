@@ -188,3 +188,23 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+
+# LLM Configuration
+LLM_PROVIDER = env('LLM_PROVIDER', default='openai')
+OPENAI_API_KEY = env('OPENAI_API_KEY', default='')
+LLM_MODEL = env('LLM_MODEL', default='gpt-4o-mini')
+LLM_MAX_TOKENS = env.int('LLM_MAX_TOKENS', default=1500)
+
+# Email & Delivery Configuration
+EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='MorningBrief <briefings@morningbrief.dev>')
+EMAIL_HOST = env('EMAIL_HOST', default='smtp.resend.com')
+EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='resend')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+RESEND_API_KEY = env('RESEND_API_KEY', default='')
+
+# Frontend URL for links in emails
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')
+

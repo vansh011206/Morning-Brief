@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="deliveries",
-                        to="digest.dailydigest",
+                        to="digest.digest",
                     ),
                 ),
             ],

@@ -42,6 +42,7 @@ urlpatterns = [
     path('api/v1/connections/', include('apps.connections.urls', namespace='connections')),
     path('api/v1/ingestor/', include('apps.ingestor.urls', namespace='ingestor')),
     path('api/v1/digest/', include('apps.digest.urls', namespace='digest')),
+    path('api/v1/digests/', include('apps.digest.urls', namespace='digests')),
     path('api/v1/delivery/', include('apps.delivery.urls', namespace='delivery')),
     path('api/v1/feedback/', include('apps.feedback.urls', namespace='feedback')),
     path('api/v1/llm/', include('apps.llm.urls', namespace='llm')),

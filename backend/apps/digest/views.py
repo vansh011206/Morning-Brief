@@ -1,105 +1,118 @@
+import pytz
 from django.utils import timezone
 from rest_framework import generics, permissions, status
-from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
-from .models import DailyDigest, DigestItem
-from .serializers import DailyDigestSerializer, DigestItemSerializer
+from rest_framework.response import Response
+from .models import Digest
+from .serializers import DigestSerializer
+from .tasks import build_digest
 
 
-class DailyDigestListView(generics.ListAPIView):
+
+def get_user_today_date(user):
+    tz_name = getattr(user.profile, 'timezone', 'Asia/Kolkata') if hasattr(user, 'profile') else 'Asia/Kolkata'
+    try:
+        user_tz = pytz.timezone(tz_name)
+    except Exception:
+        user_tz = pytz.timezone('Asia/Kolkata')
+    return timezone.now().astimezone(user_tz).date()
+
+
+class GenerateNowView(APIView):
     """
-    List past digests (archive) for current authenticated user.
-    """
-    permission_classes = (permissions.IsAuthenticated,)
-    serializer_class = DailyDigestSerializer
-
-    def get_queryset(self):
-        return DailyDigest.objects.filter(user=self.request.user).prefetch_related('items')
-
-
-class TodayDigestView(APIView):
-    """
-    Retrieve today's morning briefing for current user, initializing a default placeholder if none exists yet.
-    """
-    permission_classes = (permissions.IsAuthenticated,)
-
-    def get(self, request):
-        today = timezone.localdate()
-        digest, created = DailyDigest.objects.get_or_create(
-            user=request.user,
-            date=today,
-            defaults={
-                'headline': 'Your Morning Intelligence Brief',
-                'overview': 'Synthesizing updates across your connected channels for today.',
-                'status': DailyDigest.Status.READY,
-                'total_items_ranked': 0,
-            }
-        )
-        serializer = DailyDigestSerializer(digest)
-        return Response(serializer.data)
-
-
-class DailyDigestDetailView(generics.RetrieveAPIView):
-    """
-    Retrieve specific daily digest by ID.
-    """
-    permission_classes = (permissions.IsAuthenticated,)
-    serializer_class = DailyDigestSerializer
-
-    def get_queryset(self):
-        return DailyDigest.objects.filter(user=self.request.user).prefetch_related('items')
-
-
-class DigestItemToggleReadView(APIView):
-    """
-    Toggle read status on a specific digest item.
-    """
-    permission_classes = (permissions.IsAuthenticated,)
-
-    def post(self, request, pk):
-        try:
-            item = DigestItem.objects.get(pk=pk, digest__user=request.user)
-            item.is_read = not item.is_read
-            item.save(update_fields=['is_read'])
-            return Response({'id': item.id, 'is_read': item.is_read})
-        except DigestItem.DoesNotExist:
-            return Response({'error': 'Item not found'}, status=status.HTTP_404_NOT_FOUND)
-
-
-class DigestItemToggleArchiveView(APIView):
-    """
-    Toggle archive status on a specific digest item.
-    """
-    permission_classes = (permissions.IsAuthenticated,)
-
-    def post(self, request, pk):
-        try:
-            item = DigestItem.objects.get(pk=pk, digest__user=request.user)
-            item.is_archived = not item.is_archived
-            item.save(update_fields=['is_archived'])
-            return Response({'id': item.id, 'is_archived': item.is_archived})
-        except DigestItem.DoesNotExist:
-            return Response({'error': 'Item not found'}, status=status.HTTP_404_NOT_FOUND)
-
-
-class TriggerDigestGenerationView(APIView):
-    """
-    Trigger AI digest compilation and ranking on-demand.
+    POST /api/v1/digests/generate-now/
+    On-demand briefing compilation for current user, respecting timezone date.
+    Executes summarization pipeline immediately. If ?deliver=1 is passed,
+    immediately dispatches email delivery.
     """
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request):
-        today = timezone.localdate()
-        digest, _ = DailyDigest.objects.get_or_create(
-            user=request.user,
-            date=today,
-            defaults={'status': DailyDigest.Status.GENERATING}
+        digest_date = get_user_today_date(request.user)
+        result = build_digest(request.user.id, digest_date.isoformat())
+
+        if result.get('status') == 'error':
+            return Response(result, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        digest = Digest.objects.prefetch_related(
+            'items__raw_item__connection'
+        ).get(user=request.user, digest_date=digest_date)
+
+        # Check if delivery was requested via query param or post body
+        should_deliver = (
+            request.query_params.get('deliver') in ('1', 'true', 'True')
+            or request.data.get('deliver') in (True, '1', 'true')
         )
-        digest.status = DailyDigest.Status.GENERATING
-        digest.save(update_fields=['status'])
-        # Background task trigger would hook into Celery task here
-        return Response({
-            'status': 'queued',
-            'message': 'AI morning briefing compilation queued',
-            'digest_id': digest.id
-        })
+        if should_deliver:
+            from apps.delivery.tasks import deliver_digest
+            deliver_digest(digest.id)
+            digest.refresh_from_db()
+
+        return Response(DigestSerializer(digest).data, status=status.HTTP_201_CREATED)
+
+
+
+class TodayDigestView(APIView):
+    """
+    GET /api/v1/digests/today/
+    Retrieve today's digest for user; builds one if none exists yet.
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        digest_date = get_user_today_date(request.user)
+        digest = Digest.objects.filter(
+            user=request.user,
+            digest_date=digest_date
+        ).prefetch_related('items__raw_item__connection').first()
+
+        if not digest:
+            # Build on-demand if no digest exists for today
+            build_digest(request.user.id, digest_date.isoformat())
+            digest = Digest.objects.filter(
+                user=request.user,
+                digest_date=digest_date
+            ).prefetch_related('items__raw_item__connection').first()
+
+        if not digest:
+            return Response(
+                {"error": "No digest available for today"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response(DigestSerializer(digest).data)
+
+
+class DigestArchivePagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 50
+
+
+class DigestListView(generics.ListAPIView):
+    """
+    List user daily digests with pagination for archive browsing.
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = DigestSerializer
+    pagination_class = DigestArchivePagination
+
+    def get_queryset(self):
+        return Digest.objects.filter(user=self.request.user).prefetch_related(
+            'items__raw_item__connection'
+        ).order_by('-digest_date')
+
+
+
+class DigestDetailView(generics.RetrieveAPIView):
+    """
+    Retrieve specific daily digest details.
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = DigestSerializer
+
+    def get_queryset(self):
+        return Digest.objects.filter(user=self.request.user).prefetch_related(
+            'items__raw_item__connection'
+        )

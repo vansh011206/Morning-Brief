@@ -3,13 +3,12 @@ from django.conf import settings
 from apps.ingestor.models import RawItem
 
 
-class DailyDigest(models.Model):
+class Digest(models.Model):
     """
-    Morning briefing container for a given day and user.
+    Daily briefing container for an individual user and date.
     """
     class Status(models.TextChoices):
-        QUEUED = 'queued', 'Queued'
-        GENERATING = 'generating', 'Generating'
+        BUILDING = 'building', 'Building'
         READY = 'ready', 'Ready'
         DELIVERED = 'delivered', 'Delivered'
         FAILED = 'failed', 'Failed'
@@ -19,46 +18,49 @@ class DailyDigest(models.Model):
         on_delete=models.CASCADE,
         related_name='digests'
     )
-    date = models.DateField(db_index=True)
-    headline = models.CharField(max_length=255, default='Your Morning Briefing')
-    overview = models.TextField(blank=True, default='')
+    digest_date = models.DateField(db_index=True)
     status = models.CharField(
         max_length=32,
         choices=Status.choices,
-        default=Status.QUEUED
+        default=Status.BUILDING
     )
-    total_items_ranked = models.PositiveIntegerField(default=0)
+    item_count = models.PositiveIntegerField(default=0)
+    important_count = models.PositiveIntegerField(default=0)
+    llm_cost_cents = models.FloatField(default=0.0)
+    delivered_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('user', 'date')
-        ordering = ['-date']
+        unique_together = ('user', 'digest_date')
+        ordering = ['-digest_date']
 
     def __str__(self):
-        return f"Digest for {self.user.email} - {self.date}"
+        return f"Digest for {self.user.email} - {self.digest_date} ({self.get_status_display()})"
+
+
+# Alias for backward compatibility
+DailyDigest = Digest
 
 
 class DigestItem(models.Model):
     """
-    Ranked individual item in the user's daily briefing with AI summary and action items.
+    Individual categorized summary item in the user's daily brief.
     """
-    class Priority(models.TextChoices):
-        CRITICAL = 'critical', 'Critical'
-        HIGH = 'high', 'High'
-        MEDIUM = 'medium', 'Medium'
-        LOW = 'low', 'Low'
+    class Section(models.TextChoices):
+        NEWS = 'news', 'Technology & World News'
+        ACTIONS = 'actions', 'Pending Actions & PRs'
+        EMAILS = 'emails', 'Priority Correspondence'
+        MONEY = 'money', 'Financial & Market Updates'
+        EVENTS = 'events', 'Calendar & Scheduled Events'
 
-    class Category(models.TextChoices):
-        RECRUITER = 'recruiter', 'Recruiter / Career'
-        SECURITY = 'security', 'Security Alert'
-        CODE_REVIEW = 'code_review', 'Code Review & PR'
-        ACTION_REQUIRED = 'action_required', 'Action Required'
-        NEWSLETTER = 'newsletter', 'Newsletter / Digest'
-        GENERAL = 'general', 'General Update'
+    class Priority(models.TextChoices):
+        NORMAL = 'normal', 'Normal'
+        HIGH = 'high', 'High'
+        URGENT = 'urgent', 'Urgent'
 
     digest = models.ForeignKey(
-        DailyDigest,
+        Digest,
         on_delete=models.CASCADE,
         related_name='items'
     )
@@ -67,31 +69,26 @@ class DigestItem(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='digest_entries'
+        related_name='digest_items'
+    )
+    section = models.CharField(
+        max_length=32,
+        choices=Section.choices,
+        default=Section.NEWS
     )
     rank = models.PositiveIntegerField(default=1)
+    summary = models.TextField()
     priority = models.CharField(
         max_length=32,
         choices=Priority.choices,
-        default=Priority.MEDIUM
+        default=Priority.NORMAL
     )
-    category = models.CharField(
-        max_length=32,
-        choices=Category.choices,
-        default=Category.GENERAL
-    )
-    source = models.CharField(max_length=32, default='email')
-    sender = models.CharField(max_length=255, blank=True, default='')
-    title = models.CharField(max_length=512)
-    summary = models.TextField()
-    action_items = models.JSONField(default=list, blank=True)
-    external_url = models.URLField(max_length=1024, blank=True, default='')
-    is_read = models.BooleanField(default=False)
-    is_archived = models.BooleanField(default=False)
+    ai_reason = models.TextField(blank=True, default='')
+    source_title = models.CharField(max_length=512, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['rank', '-priority']
+        ordering = ['rank', 'id']
 
     def __str__(self):
-        return f"#{self.rank} [{self.priority}] {self.title[:50]}"
+        return f"#{self.rank} [{self.section}|{self.priority}] {self.source_title[:45]}"

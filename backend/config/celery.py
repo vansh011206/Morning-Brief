@@ -18,6 +18,10 @@ app.conf.beat_schedule = {
         'task': 'apps.ingestor.tasks.fetch_all_active_rss_feeds',
         'schedule': 1800.0,  # runs every 30 minutes
     },
+    'dispatch-scheduled-digests-every-5min': {
+        'task': 'apps.delivery.tasks.dispatch_scheduled_digests',
+        'schedule': 300.0,  # runs every 5 minutes
+    },
 }
 
 @app.task(bind=True, ignore_result=True)

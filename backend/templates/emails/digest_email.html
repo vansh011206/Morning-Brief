@@ -1,0 +1,274 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="supported-color-schemes" content="light dark" />
+  <title>Your Morning Brief - {{ formatted_date }}</title>
+  <style type="text/css">
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background-color: #FAFAF9 !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    table {
+      border-collapse: collapse;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+    td, th {
+      padding: 0;
+    }
+    img {
+      border: 0;
+      height: auto;
+      line-height: 100%;
+      outline: none;
+      text-decoration: none;
+    }
+    a {
+      color: #4F46E5;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    @media only screen and (max-width: 620px) {
+      .container-table {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      .mobile-padding {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+      }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #FAFAF9; color: #18181B;">
+  <!-- Outer Wrapper Table -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FAFAF9; width: 100%; table-layout: fixed;">
+    <tr>
+      <td align="center" style="padding: 24px 12px 36px 12px;">
+        <!-- Main Email Container (600px) -->
+        <table role="presentation" class="container-table" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 600px; max-width: 600px; background-color: #FFFFFF; border-radius: 16px; overflow: hidden; border: 1px solid #E4E4E7; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+          
+          <!-- Header Band with Subtle Indigo Gradient -->
+          <tr>
+            <td style="background: #4338CA; background: linear-gradient(135deg, #4F46E5 0%, #3730A3 100%); padding: 32px 28px; text-align: left;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <!-- App Mark / Logo -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="background-color: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; width: 28px; height: 28px; text-align: center; vertical-align: middle;">
+                          <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 800; font-size: 15px; color: #FFFFFF; line-height: 28px;">M</span>
+                        </td>
+                        <td style="padding-left: 10px;">
+                          <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 20px; font-weight: 700; color: #FFFFFF; letter-spacing: -0.5px;">MorningBrief</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td align="right" style="vertical-align: middle;">
+                    <span style="display: inline-block; background-color: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 600; color: #EEF2FF; text-transform: uppercase; letter-spacing: 0.5px;">
+                      Daily Digest
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td colspan="2" style="padding-top: 18px;">
+                    <p style="margin: 0; font-size: 24px; font-weight: 700; color: #FFFFFF; letter-spacing: -0.4px;">
+                      {{ greeting }}, {{ user_first_name }}
+                    </p>
+                    <p style="margin: 6px 0 0 0; font-size: 13px; font-weight: 400; color: #C7D2FE;">
+                      {{ formatted_date }} &bull; {{ timezone_name }}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Summary Highlights Bar -->
+          <tr>
+            <td style="background-color: #F8FAFC; border-bottom: 1px solid #E2E8F0; padding: 12px 28px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="font-size: 12px; color: #64748B; font-weight: 500;">
+                    <strong style="color: #1E293B;">{{ digest.item_count }}</strong> items synthesized
+                    {% if digest.important_count > 0 %}
+                      &bull; <strong style="color: #E11D48;">{{ digest.important_count }}</strong> high priority
+                    {% endif %}
+                  </td>
+                  <td align="right">
+                    <a href="{{ frontend_url }}/today" style="font-size: 12px; font-weight: 600; color: #4F46E5; text-decoration: none;">
+                      Open in App &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Digest Content Sections Area -->
+          <tr>
+            <td class="mobile-padding" style="padding: 24px 28px 20px 28px; background-color: #FFFFFF;">
+              
+              {% if not sections %}
+                <!-- Empty fallback -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding: 30px 0; text-align: center;">
+                  <tr>
+                    <td>
+                      <p style="margin: 0; font-size: 15px; font-weight: 600; color: #18181B;">No new updates for today</p>
+                      <p style="margin: 6px 0 0 0; font-size: 13px; color: #71717A;">All connected news feeds and mailboxes are currently up to date.</p>
+                    </td>
+                  </tr>
+                </table>
+              {% endif %}
+
+              {% for sec in sections %}
+                <!-- Section Container -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
+                  <!-- Section Header -->
+                  <tr>
+                    <td style="padding-bottom: 10px; border-bottom: 1px solid #F4F4F5;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td>
+                            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: {{ sec.accent_color }}; margin-right: 8px; vertical-align: middle;"></span>
+                            <span style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: #27272A; vertical-align: middle;">
+                              {{ sec.title }}
+                            </span>
+                          </td>
+                          <td align="right">
+                            <span style="display: inline-block; background-color: #F4F4F5; border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 600; color: #71717A;">
+                              {{ sec.items|length }}
+                            </span>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+
+                  <!-- Section Items -->
+                  {% for item in sec.items %}
+                    <tr>
+                      <td style="padding-top: 12px; padding-bottom: 4px;">
+                        <!-- Individual Item Block with Colored Left Border -->
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FAFAFA; border-radius: 8px; border-left: 4px solid {{ sec.accent_color }}; border-top: 1px solid #F4F4F5; border-right: 1px solid #F4F4F5; border-bottom: 1px solid #F4F4F5;">
+                          <tr>
+                            <td style="padding: 14px 16px;">
+                              <!-- Item Header: Source & Priority Badge -->
+                              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 6px;">
+                                <tr>
+                                  <td>
+                                    <span style="display: inline-block; background-color: #F4F4F5; border-radius: 4px; padding: 2px 6px; font-size: 11px; font-weight: 600; color: #52525B;">
+                                      {{ item.source_name|default:"Feed Source" }}
+                                    </span>
+                                    {% if item.author %}
+                                      <span style="font-size: 11px; color: #A1A1AA; margin-left: 6px;">
+                                        by {{ item.author }}
+                                      </span>
+                                    {% endif %}
+                                  </td>
+                                  <td align="right">
+                                    {% if item.priority == 'urgent' %}
+                                      <span style="display: inline-block; background-color: #FFE4E6; border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: 700; color: #E11D48; text-transform: uppercase;">
+                                        Urgent
+                                      </span>
+                                    {% elif item.priority == 'high' %}
+                                      <span style="display: inline-block; background-color: #FEF3C7; border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: 700; color: #D97706; text-transform: uppercase;">
+                                        High
+                                      </span>
+                                    {% endif %}
+                                  </td>
+                                </tr>
+                              </table>
+
+                              <!-- Item Title -->
+                              <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600; line-height: 1.4; color: #18181B;">
+                                {{ item.source_title }}
+                              </p>
+
+                              <!-- Item AI Summary -->
+                              <p style="margin: 0 0 10px 0; font-size: 13px; line-height: 1.5; color: #52525B;">
+                                {{ item.summary }}
+                              </p>
+
+                              <!-- Item Source Link -->
+                              {% if item.source_url %}
+                                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                  <tr>
+                                    <td>
+                                      <a href="{{ item.source_url }}" target="_blank" style="display: inline-block; font-size: 12px; font-weight: 600; color: #4F46E5; text-decoration: none;">
+                                        Read source article &rarr;
+                                      </a>
+                                    </td>
+                                  </tr>
+                                </table>
+                              {% endif %}
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </table>
+              {% endfor %}
+
+            </td>
+          </tr>
+
+          <!-- Call to Action Banner -->
+          <tr>
+            <td class="mobile-padding" style="padding: 0 28px 24px 28px; background-color: #FFFFFF;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #EEF2FF; border: 1px solid #E0E7FF; border-radius: 10px; text-align: center;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #3730A3;">
+                      Want to customize sources, timezones, or delivery channels?
+                    </p>
+                    <a href="{{ frontend_url }}/settings" style="display: inline-block; background-color: #4F46E5; color: #FFFFFF; font-size: 12px; font-weight: 600; padding: 7px 16px; border-radius: 6px; text-decoration: none;">
+                      Manage Briefing Preferences
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer Area -->
+          <tr>
+            <td style="background-color: #F4F4F5; border-top: 1px solid #E4E4E7; padding: 24px 28px; text-align: center;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="font-size: 12px; color: #71717A; padding-bottom: 8px;">
+                    <a href="{{ frontend_url }}/archive" style="color: #52525B; font-weight: 500; text-decoration: none;">Archive</a>
+                    <span style="color: #D4D4D8; margin: 0 8px;">&bull;</span>
+                    <a href="{{ frontend_url }}/settings" style="color: #52525B; font-weight: 500; text-decoration: none;">Settings</a>
+                    <span style="color: #D4D4D8; margin: 0 8px;">&bull;</span>
+                    <a href="{{ unsubscribe_url }}" style="color: #52525B; font-weight: 500; text-decoration: none;">Unsubscribe</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="font-size: 11px; line-height: 1.5; color: #A1A1AA;">
+                    You are receiving this morning briefing because daily digest delivery is enabled on your MorningBrief account.<br />
+                    MorningBrief Inc. &bull; Automated Personal Intelligence Engine
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
