@@ -141,9 +141,35 @@ export interface Digest {
 // Alias for backward compatibility
 export type DailyDigest = Digest
 
+export interface PaginatedResponse<T> {
+  count: number
+  next: string | null
+  previous: string | null
+  results: T[]
+}
+
+export interface DeliveryLog {
+  id: number
+  digest: number
+  channel: 'email' | 'telegram'
+  status: 'pending' | 'sent' | 'failed'
+  recipient: string
+  sent_at: string | null
+  error_message: string
+  created_at: string
+}
+
+export interface TestBriefResponse {
+  status: string
+  recipient: string
+  message: string
+  delivered_at: string
+}
+
 export interface HealthResponse {
   status: string
   service: string
   timestamp: string
   version: string
 }
+

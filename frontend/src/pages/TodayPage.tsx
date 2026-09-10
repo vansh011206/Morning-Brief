@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
@@ -8,6 +9,8 @@ import {
   RefreshCw,
   Coffee,
   TrendingUp,
+  Mail,
+  CheckCircle2,
 } from 'lucide-react'
 import {
   Button,
@@ -69,24 +72,34 @@ export const TodayPage: React.FC = () => {
     queryFn: () => ingestorApi.getRawItems({ limit: 50 }),
   })
 
-  // Generate now mutation
+  // Generate now mutation (supports ?deliver=1)
   const generateMutation = useMutation({
-    mutationFn: digestApi.generateNow,
-    onSuccess: (newDigest) => {
+    mutationFn: (deliver: boolean = false) => digestApi.generateNow(deliver),
+    onSuccess: (newDigest, variables) => {
       queryClient.setQueryData(['todayDigest'], newDigest)
       queryClient.invalidateQueries({ queryKey: ['todayDigest'] })
-      addToast({
-        type: 'success',
-        title: 'Digest Compiled',
-        description: `Synthesized ${newDigest.item_count} items across ${
-          Object.keys(newDigest.sections || {}).length
-        } sections.`,
-      })
+      queryClient.invalidateQueries({ queryKey: ['digestArchive'] })
+
+      if (variables === true) {
+        addToast({
+          type: 'success',
+          title: 'Email Briefing Dispatched',
+          description: `Dispatched ${newDigest.item_count} synthesized items to your email.`,
+        })
+      } else {
+        addToast({
+          type: 'success',
+          title: 'Digest Compiled',
+          description: `Synthesized ${newDigest.item_count} items across ${
+            Object.keys(newDigest.sections || {}).length
+          } sections.`,
+        })
+      }
     },
     onError: (err: any) => {
       addToast({
         type: 'error',
-        title: 'Generation Failed',
+        title: 'Operation Failed',
         description: err.response?.data?.message || 'Could not compile daily digest.',
       })
     },
@@ -107,6 +120,7 @@ export const TodayPage: React.FC = () => {
 
   const hasItems = digest && digest.items && digest.items.length > 0
   const sectionsList = digest?.sections ? Object.values(digest.sections) : []
+  const isDelivered = digest?.status === 'delivered' || !!digest?.delivered_at
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-14 px-2 sm:px-0">
@@ -129,7 +143,7 @@ export const TodayPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           {viewMode === 'raw' ? (
             <Button
               variant="outline"
@@ -141,18 +155,35 @@ export const TodayPage: React.FC = () => {
               Refresh Raw Feed
             </Button>
           ) : (
-            <Button
-              variant="primary"
-              size="sm"
-              isLoading={generateMutation.isPending || isDigestFetching}
-              onClick={() => generateMutation.mutate()}
-              leftIcon={<Sparkles className="w-4 h-4 text-amber-300" />}
-            >
-              {hasItems ? 'Re-rank Briefing' : 'Generate Briefing'}
-            </Button>
+            <>
+              {hasItems && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  isLoading={generateMutation.isPending && generateMutation.variables === true}
+                  onClick={() => generateMutation.mutate(true)}
+                  leftIcon={<Mail className="w-3.5 h-3.5 text-primary" />}
+                >
+                  Resend Email Digest
+                </Button>
+              )}
+              <Button
+                variant="primary"
+                size="sm"
+                isLoading={
+                  (generateMutation.isPending && generateMutation.variables !== true) ||
+                  isDigestFetching
+                }
+                onClick={() => generateMutation.mutate(false)}
+                leftIcon={<Sparkles className="w-4 h-4 text-amber-300" />}
+              >
+                {hasItems ? 'Re-rank Briefing' : 'Generate Briefing'}
+              </Button>
+            </>
           )}
         </div>
       </div>
+
 
       {/* Top View Selector: Morning Digest vs. Live Raw Pipeline */}
       <div>
@@ -187,7 +218,7 @@ export const TodayPage: React.FC = () => {
               action={
                 <Button
                   variant="primary"
-                  onClick={() => generateMutation.mutate()}
+                  onClick={() => generateMutation.mutate(false)}
                   isLoading={generateMutation.isPending}
                   leftIcon={<Sparkles className="w-4 h-4 text-amber-300" />}
                 >
@@ -197,12 +228,37 @@ export const TodayPage: React.FC = () => {
             />
           ) : (
             /* Ready Digest with Sections & Items */
-            <div className="space-y-8">
+            <div className="space-y-6">
+              {/* Delivered State Banner */}
+              {isDelivered && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs shadow-xs">
+                  <div className="flex items-center gap-2 text-emerald-900 font-medium">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>
+                      Delivered {digest.delivered_at ? format(new Date(digest.delivered_at), 'h:mm a') : 'today'}
+                    </span>
+                    <span className="text-emerald-300 hidden sm:inline">&bull;</span>
+                    <Link
+                      to="/archive"
+                      className="text-emerald-700 hover:text-emerald-900 underline font-semibold inline-flex items-center gap-1"
+                    >
+                      <span>Open in archive</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="emerald" dot size="sm">
+                      Email Dispatched
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
               {/* Digest Metadata Strip */}
               <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-zinc-50/90 border border-zinc-200/80 text-xs">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <Badge variant="emerald" dot size="sm">
-                    Ready · {digest.item_count} items
+                  <Badge variant={isDelivered ? 'emerald' : 'indigo'} dot size="sm">
+                    {isDelivered ? 'Delivered' : 'Ready'} · {digest.item_count} items
                   </Badge>
 
                   {digest.important_count > 0 && (

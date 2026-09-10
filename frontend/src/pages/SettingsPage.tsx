@@ -29,7 +29,9 @@ import {
 import { useToastStore } from '../store/useToastStore'
 import { useAuthStore } from '../store/useAuthStore'
 import { authApi } from '../api/auth'
+import { digestApi } from '../api/digest'
 import type { DeliveryChannel } from '../api/types'
+
 
 const ALL_TIMEZONES = [
   { value: 'Asia/Kolkata', label: 'Asia/Kolkata (IST - UTC+05:30)' },
@@ -54,6 +56,7 @@ export const SettingsPage: React.FC = () => {
   const [isLoadingProfile, setIsLoadingProfile] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isSendingTestBrief, setIsSendingTestBrief] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
@@ -135,6 +138,26 @@ export const SettingsPage: React.FC = () => {
       })
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleSendTestBrief = async () => {
+    setIsSendingTestBrief(true)
+    try {
+      const res = await digestApi.sendTestBrief()
+      addToast({
+        type: 'success',
+        title: 'Test Brief Dispatched',
+        description: res.message || `Briefing email sent to ${user?.email}`,
+      })
+    } catch (err: any) {
+      addToast({
+        type: 'error',
+        title: 'Delivery Failed',
+        description: err.response?.data?.error || 'Unable to dispatch test brief.',
+      })
+    } finally {
+      setIsSendingTestBrief(false)
     }
   }
 
@@ -381,6 +404,30 @@ export const SettingsPage: React.FC = () => {
                 helperText="Send /start to @MorningBriefBot to link your ID"
               />
             )}
+
+            {/* Test Email Preview Action */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl bg-indigo-50/50 border border-indigo-100">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-100/80 border border-indigo-200 flex items-center justify-center text-primary shrink-0">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-xs font-semibold text-zinc-900">Email Digest Preview</h5>
+                  <p className="text-[11px] text-zinc-500">
+                    Dispatch today's synthesized briefing to <span className="font-mono text-zinc-700">{user?.email}</span> immediately.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                isLoading={isSendingTestBrief}
+                onClick={handleSendTestBrief}
+                leftIcon={<Send className="w-3.5 h-3.5 text-primary" />}
+              >
+                Send me a test brief
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
