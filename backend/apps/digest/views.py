@@ -10,6 +10,13 @@ from .tasks import build_digest
 
 
 
+from rest_framework.throttling import UserRateThrottle
+
+
+class GenerateNowRateThrottle(UserRateThrottle):
+    scope = 'generate_now'
+
+
 def get_user_today_date(user):
     tz_name = getattr(user.profile, 'timezone', 'Asia/Kolkata') if hasattr(user, 'profile') else 'Asia/Kolkata'
     try:
@@ -27,6 +34,7 @@ class GenerateNowView(APIView):
     immediately dispatches email delivery.
     """
     permission_classes = (permissions.IsAuthenticated,)
+    throttle_classes = (GenerateNowRateThrottle,)
 
     def post(self, request):
         digest_date = get_user_today_date(request.user)
@@ -116,3 +124,31 @@ class DigestDetailView(generics.RetrieveAPIView):
         return Digest.objects.filter(user=self.request.user).prefetch_related(
             'items__raw_item__connection'
         )
+        from apps.ingestor.models import RawItem
+
+        try:
+            digest = Digest.objects.get(pk=pk, user=request.user)
+        except Digest.DoesNotExist:
+            return Response({'error': 'Digest not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        skipped_spam = digest.meta.get('skipped_spam', [])
+        item_ids = [s.get('item_id') for s in skipped_spam if s.get('item_id')]
+
+        restored_count = 0
+        if item_ids:
+            restored_count = RawItem.objects.filter(
+                id__in=item_ids,
+                user=request.user
+            ).update(is_spam=False)
+
+        # Clear skipped spam from digest meta
+        digest.meta['skipped_spam'] = []
+        digest.meta['skipped_count'] = 0
+        digest.save(update_fields=['meta'])
+
+        return Response({
+            'status': 'restored',
+            'restored_count': restored_count,
+            'message': f'Restored {restored_count} newsletters. They will be considered on the next digest build.',
+        }, status=status.HTTP_200_OK)
+

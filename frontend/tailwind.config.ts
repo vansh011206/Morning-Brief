@@ -8,13 +8,11 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        canvas: {
-          DEFAULT: '#FAFAF9',
-          subtle: '#F5F5F4',
-          card: '#FFFFFF',
-        },
         primary: {
           DEFAULT: '#4F46E5',
+          strong: '#4338CA',
+          soft: '#EEF2FF',
+          glow: 'rgba(79, 70, 229, 0.12)',
           hover: '#4338CA',
           light: '#EEF2FF',
           50: '#EEF2FF',
@@ -27,6 +25,11 @@ const config: Config = {
           700: '#4338CA',
           800: '#3730A3',
           900: '#312E81',
+        },
+        sunrise: {
+          DEFAULT: '#F59E0B',
+          soft: '#FFFBEB',
+          glow: 'rgba(245, 158, 11, 0.12)',
         },
         amber: {
           DEFAULT: '#F59E0B',
@@ -41,6 +44,21 @@ const config: Config = {
           600: '#D97706',
           700: '#B45309',
         },
+        success: '#10B981',
+        danger: '#E11D48',
+        ink: '#18181B',
+        body: '#3F3F46',
+        muted: '#71717A',
+        sidebar: '#0F0F0F',
+        dark: '#111113',
+        paper: '#FCFCF9',
+        canvas: {
+          DEFAULT: '#F8F7F4',
+          subtle: '#F2EFE9',
+          card: '#FFFFFF',
+        },
+        card: '#FFFFFF',
+        skeleton: '#F4F4F5',
         emerald: {
           DEFAULT: '#10B981',
           50: '#ECFDF5',
@@ -56,14 +74,36 @@ const config: Config = {
           700: '#BE123C',
         },
       },
+      borderRadius: {
+        'lg': '8px',
+        'xl': '12px',
+        '2xl': '16px',
+        '20': '20px',
+        '24': '24px',
+        'full': '9999px',
+      },
+      boxShadow: {
+        'xs': '0 1px 2px rgba(0, 0, 0, 0.04)',
+        'sm': '0 2px 8px rgba(0, 0, 0, 0.06)',
+        'md': '0 4px 16px rgba(0, 0, 0, 0.08)',
+        'lg': '0 8px 32px rgba(0, 0, 0, 0.12)',
+        'xl': '0 16px 48px rgba(0, 0, 0, 0.16)',
+        'indigo': '0 8px 24px rgba(79, 70, 229, 0.15)',
+        'amber': '0 8px 24px rgba(245, 158, 11, 0.12)',
+        'dark-lg': '0 8px 32px rgba(0, 0, 0, 0.3)',
+      },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         display: ['Sora', 'system-ui', 'sans-serif'],
       },
-      boxShadow: {
-        'soft-glow': '0 0 50px -12px rgba(79, 70, 229, 0.15)',
-        'amber-glow': '0 0 35px -8px rgba(245, 158, 11, 0.2)',
-        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.05)',
+      keyframes: {
+        shimmer: {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
+      },
+      animation: {
+        shimmer: 'shimmer 1.5s infinite linear',
       },
     },
   },

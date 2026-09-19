@@ -45,18 +45,20 @@ def deliver_digest(self, digest_arg):
         logger.info(f"[deliver_digest] Digest #{digest_id} is still building, retrying in 30s...")
         raise self.retry(countdown=30)
 
-    # Dispatch email via DeliveryService
-    success, result_message = DeliveryService.send_digest_email(digest)
+    # Dispatch via DeliveryService (email, telegram, or both)
+    results = DeliveryService.send(digest)
+    any_success = any(r.get('success') for r in results.values()) if results else False
 
-    if not success:
-        logger.error(f"[deliver_digest] Delivery failed for Digest #{digest_id}: {result_message}")
+    if not any_success:
+        err_msg = "; ".join([f"{ch}: {r.get('result')}" for ch, r in results.items()])
+        logger.error(f"[deliver_digest] Delivery failed for Digest #{digest_id}: {err_msg}")
         try:
             # Exponential backoff: 60s, 120s, 240s
             backoff_delay = 60 * (2 ** self.request.retries)
-            raise self.retry(exc=Exception(result_message), countdown=backoff_delay)
+            raise self.retry(exc=Exception(err_msg), countdown=backoff_delay)
         except self.MaxRetriesExceededError:
             logger.error(f"[deliver_digest] Max retries exceeded for Digest #{digest_id}")
-            return {'status': 'failed', 'error': result_message}
+            return {'status': 'failed', 'error': err_msg}
 
     # Update digest delivered status & timestamp
     digest.status = Digest.Status.DELIVERED
@@ -68,11 +70,18 @@ def deliver_digest(self, digest_arg):
         f"at {digest.delivered_at.isoformat()}"
     )
 
+    message_id = (
+        results.get('email', {}).get('result')
+        or results.get('telegram', {}).get('result')
+        or 'delivered'
+    )
+
     return {
         'status': 'delivered',
         'digest_id': digest.id,
-        'message_id': result_message,
+        'message_id': message_id,
         'delivered_at': digest.delivered_at.isoformat(),
+        'results': results,
     }
 
 

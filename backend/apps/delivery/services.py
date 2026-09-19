@@ -148,6 +148,13 @@ class DeliveryService:
                 message_id = email_resp.get('id', '') if isinstance(email_resp, dict) else str(email_resp)
                 logger.info(f"[DeliveryService] Sent email via Resend to {recipient} (id: {message_id})")
             else:
+                import sys
+                if hasattr(sys.stdout, 'reconfigure'):
+                    try:
+                        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+                    except Exception:
+                        pass
+
                 msg = EmailMultiAlternatives(
                     subject=subject,
                     body=text_content,
@@ -155,7 +162,19 @@ class DeliveryService:
                     to=[recipient],
                 )
                 msg.attach_alternative(html_content, "text/html")
-                msg.send(fail_silently=False)
+                try:
+                    msg.send(fail_silently=False)
+                except UnicodeEncodeError:
+                    # Gracefully sanitize body for Windows console output
+                    clean_body = text_content.encode('ascii', errors='replace').decode('ascii')
+                    clean_msg = EmailMultiAlternatives(
+                        subject=subject.encode('ascii', errors='replace').decode('ascii'),
+                        body=clean_body,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        to=[recipient],
+                    )
+                    clean_msg.send(fail_silently=True)
+
                 message_id = f"django-{timezone.now().timestamp()}"
                 logger.info(f"[DeliveryService] Sent email via {settings.EMAIL_BACKEND} to {recipient}")
 
@@ -179,3 +198,70 @@ class DeliveryService:
                 error_message=str(e),
             )
             return False, str(e)
+
+    @classmethod
+    def send_digest_telegram(cls, digest: Digest, chat_id: str = None) -> tuple[bool, str]:
+        """Delivers formatted daily brief to Telegram chat with inline rating buttons."""
+        from apps.connections.telegram_service import TelegramService
+
+        target_chat_id = chat_id or (
+            getattr(digest.user.profile, 'telegram_chat_id', None)
+            if hasattr(digest.user, 'profile') else None
+        )
+        if not target_chat_id:
+            err = "Telegram chat_id is missing on user profile"
+            DeliveryLog.objects.create(
+                digest=digest,
+                channel=DeliveryLog.Channel.TELEGRAM,
+                status=DeliveryLog.Status.FAILED,
+                recipient='',
+                error_message=err,
+            )
+            return False, err
+
+        text, reply_markup = TelegramService.format_digest_html(digest)
+        success, result_message = TelegramService.send_message(
+            chat_id=target_chat_id,
+            text=text,
+            parse_mode='HTML',
+            reply_markup=reply_markup,
+        )
+
+        log_status = DeliveryLog.Status.SENT if success else DeliveryLog.Status.FAILED
+        DeliveryLog.objects.create(
+            digest=digest,
+            channel=DeliveryLog.Channel.TELEGRAM,
+            status=log_status,
+            recipient=target_chat_id,
+            external_message_id=result_message if success else '',
+            error_message='' if success else result_message,
+            sent_at=timezone.now() if success else None,
+        )
+        return success, result_message
+
+    @classmethod
+    def send(cls, digest: Digest, channel: str = None) -> dict:
+        """
+        Unified dispatch: sends digest via email, telegram, or both based on preferences.
+        """
+        user_channel = channel or (
+            getattr(digest.user.profile, 'delivery_channel', 'email')
+            if hasattr(digest.user, 'profile') else 'email'
+        )
+
+        results = {}
+        if user_channel in ('email', 'both'):
+            email_ok, email_res = cls.send_digest_email(digest)
+            results['email'] = {'success': email_ok, 'result': email_res}
+
+        if user_channel in ('telegram', 'both'):
+            tg_ok, tg_res = cls.send_digest_telegram(digest)
+            results['telegram'] = {'success': tg_ok, 'result': tg_res}
+
+        # Record channels in digest.delivery_channels
+        active_channels = [ch for ch, r in results.items() if r['success']]
+        if active_channels:
+            digest.delivery_channels = list(set(digest.delivery_channels + active_channels))
+            digest.save(update_fields=['delivery_channels', 'updated_at'])
+
+        return results

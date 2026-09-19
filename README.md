@@ -1,199 +1,230 @@
 # MorningBrief
 
 > **Personal AI Morning-Briefing & Ranked Notification Intelligence Web Application**  
-> MorningBrief connects your communication channels (Google Gmail, GitHub, and more) and automatically synthesizes, ranks, and delivers an actionable, prioritized morning digest every day at 07:00 AM via Email, Telegram, and the web app.
+> MorningBrief connects your communication and developer feeds (Google Gmail, GitHub, RSS, and more) and automatically synthesizes, ranks, and delivers an executive morning briefing every day at 07:00 AM via Email, Telegram, and the Web SPA.
 
 ---
 
-## Architecture Overview
+## System Architecture
 
-MorningBrief is structured as a monorepo:
+```mermaid
+flowchart TB
+    subgraph External["External Sources & OAuth"]
+        Gmail["Google Gmail (OAuth 2.0 / Read-Only)"]
+        GitHub["GitHub (OAuth 2.0 / PRs & Notifications)"]
+        RSS["RSS / Atom Feeds"]
+    end
 
-```
-Morning-Brief/
-├── backend/                  # Django 5.2 LTS, Python 3.12+, Daphne ASGI, DRF
-│   ├── config/               # Settings, Celery, ASGI, WSGI, URLs
-│   ├── apps/
-│   │   ├── accounts/         # Custom User, UserProfile, SimpleJWT auth
-│   │   ├── connections/      # Gmail & GitHub OAuth integrations
-│   │   ├── ingestor/         # Raw notifications ingestion & normalization
-│   │   ├── digest/           # DailyDigest & ranked DigestItem models & views
-│   │   ├── delivery/         # Email & Telegram dispatch audit logs
-│   │   ├── feedback/         # User ratings & feedback for ranking alignment
-│   │   └── llm/              # AI ranking and summarization engine
-│   ├── manage.py
-│   ├── requirements.txt
-│   └── Dockerfile
-├── frontend/                 # Vite, React 19, Strict TypeScript, Tailwind CSS
-│   ├── src/
-│   │   ├── api/              # Axios client with single-flight JWT token refresh
-│   │   ├── components/ui/    # 15 Shared UI Kit components (icons only, zero emojis)
-│   │   ├── features/         # auth, onboarding, connections, digest, archive, settings
-│   │   ├── layouts/          # AppShell (glass header, icon rail, mobile bottom bar)
-│   │   ├── pages/            # /today, /archive, /connections, /settings, etc.
-│   │   ├── store/            # Zustand auth and toast state stores
-│   │   └── styles/           # Tailwind tokens, fonts (Inter + Sora), canvas glow
-│   ├── package.json
-│   ├── tailwind.config.ts
-│   ├── vite.config.ts
-│   └── Dockerfile
-├── docker-compose.yml        # PostgreSQL 16, Redis 7, Backend, Celery, Frontend
-├── .env.example              # Full environment variable reference (no hardcoded secrets)
-└── README.md
-```
+    subgraph Ingestion["Data Ingestion & Security"]
+        Ingestor["Celery Ingestor (fetch_rss, fetch_gmail)"]
+        Crypto["Fernet Token Encryption (At Rest)"]
+        RawItems[("RawItems Table (Deduplication & Spam Rules)")]
+    end
 
----
+    subgraph LLM["AI Summarization & Ranking"]
+        Engine["LLM Engine (Groq / OpenAI / MockLLM)"]
+        Weights["User Category Weights & Feedback Loop"]
+        DailyDigest[("DailyDigest & Ranked DigestItems")]
+    end
 
-## Global Design System & Tokens
+    subgraph Delivery["Multi-Channel Delivery"]
+        EmailWorker["Resend / SMTP Delivery Worker (HTML + Text)"]
+        TelegramWorker["Telegram Bot Dispatcher (HTML Truncation <= 4096)"]
+        WebSPA["Vercel React 19 SPA (Lucide Icons, Zero Emojis)"]
+    end
 
-MorningBrief adheres strictly to the defined design system tokens:
-- **Primary Indigo**: `#4F46E5` (main), `#4338CA` (hover/dark), `#EEF2FF` (light/tint)
-- **Amber Sunrise**: `#F59E0B`, `#FFFBEB`
-- **Emerald Accent**: `#10B981`
-- **Rose Accent**: `#E11D48`
-- **Canvas Background**: `#FAFAF9` with soft ambient canvas glow
-- **Typography**: `Inter` (body) & `Sora` (display headers) via `@fontsource`
-- **Helpers**: `.tabular-nums` for timers and counters, `.glass-header`, `.glass-card`
-- **Iconography**: 100% Lucide React SVG icons (**zero emojis** across all code and copy)
-
----
-
-## Acceptance Criteria Checklist
-
-| Requirement | Implementation Details | Status |
-| :--- | :--- | :---: |
-| **Both Apps Boot** | Backend Daphne ASGI + Frontend Vite React 19 | Verified |
-| **Health 200 OK** | `/api/v1/health/` returns JSON status 200 | Verified |
-| **Design Tokens Exact** | Indigo, Amber sunrise, Emerald, Rose, Zinc, Canvas | Verified |
-| **Zero Emojis** | Strictly SVG Lucide icons across UI and typography | Verified |
-| **Mobile 360px** | Bottom 4-tab bar (Today, Archive, Connections, Settings), no overflow | Verified |
-| **Desktop Rail** | Left icon rail on `lg+` (sticky, tooltips) + Glass Header | Verified |
-| **TypeScript Strict** | Clean `tsc --noEmit` with zero errors | Verified |
-| **Django Checks** | Clean `python manage.py check` and automated unit tests passing | Verified |
-
----
-
-## Quickstart with Docker Compose
-
-To launch the full production-ready stack (PostgreSQL, Redis, Daphne Backend, Celery Worker, Celery Beat, and Frontend Nginx):
-
-```bash
-# 1. Clone or navigate to the repository
-cd Morning-Brief
-
-# 2. Configure environment variables
-cp .env.example .env
-
-# 3. Build and launch all services in detached mode
-docker compose up --build -d
-
-# 4. View logs
-docker compose logs -f
+    Gmail --> Ingestor
+    GitHub --> Ingestor
+    RSS --> Ingestor
+    Ingestor --> Crypto
+    Ingestor --> RawItems
+    RawItems --> Engine
+    Weights --> Engine
+    Engine --> DailyDigest
+    DailyDigest --> EmailWorker
+    DailyDigest --> TelegramWorker
+    DailyDigest --> WebSPA
 ```
 
-The services will be available at:
-- **Frontend App**: `http://localhost:5173`
-- **Backend API**: `http://localhost:8000/api/v1/`
-- **Interactive Swagger Docs**: `http://localhost:8000/api/v1/docs/`
-- **ReDoc Schema**: `http://localhost:8000/api/v1/redoc/`
-- **Health Check**: `http://localhost:8000/api/v1/health/`
+---
+
+## Global Design System & Principles
+
+MorningBrief adheres strictly to a clean, cohesive visual design system:
+- **Design Tokens**:
+  - Primary Indigo: `#4F46E5` (main), `#4338CA` (hover/dark), `#EEF2FF` (light/tint)
+  - Amber Sunrise: `#F59E0B`, `#FFFBEB`
+  - Emerald Accent: `#10B981`
+  - Rose Accent: `#E11D48`
+  - Canvas Background: `#FAFAF9` with soft ambient canvas glow
+- **Typography**: Inter (clean body copy) and Sora (distinctive display headers)
+- **Zero Emojis**: 100% Lucide React SVG icons across all web templates, emails, and code. No Unicode emojis permitted.
+- **Micro-Interactions**: Optimistic feedback voting, interactive "Why this?" rationale tooltips, copy-to-clipboard Telegram integration.
 
 ---
 
-## Local Development Without Docker
+## Environment Variables Reference
 
-### 1. Backend Setup
+| Variable | Description | Default / Example | Required in Prod |
+| :--- | :--- | :--- | :---: |
+| `DEBUG` | Django debug mode (`False` in prod) | `False` | Yes |
+| `SECRET_KEY` | Django cryptographic signing secret | `django-insecure-...` | Yes |
+| `ENCRYPTION_KEY` / `FERNET_KEY` | 32-byte Fernet key for encrypting OAuth tokens | *(Generated base64 key)* | Yes |
+| `ALLOWED_HOSTS` | Comma-separated allowed hostnames | `.onrender.com,localhost` | Yes |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated frontend domains | `https://morningbrief.vercel.app` | Yes |
+| `DATABASE_URL` | PostgreSQL connection string (Neon Postgres) | `postgresql://...` | Yes |
+| `REDIS_URL` | Redis broker & backend URL (Upstash Redis) | `rediss://...` | Yes |
+| `OPENAI_API_KEY` | OpenAI or Groq API Key | `gsk_...` / `sk-proj-...` | Yes |
+| `OPENAI_BASE_URL` | OpenAI-compatible base URL (e.g., Groq) | `https://api.groq.com/openai/v1` | No |
+| `LLM_MODEL` | LLM model identifier | `llama-3.3-70b-versatile` | No |
+| `RESEND_API_KEY` | Resend API Key for transactional digest emails | `re_...` | Yes |
+| `EMAIL_HOST` | SMTP server hostname | `smtp.resend.com` | Yes |
+| `EMAIL_PORT` | SMTP server port | `587` | Yes |
+| `EMAIL_HOST_USER` | SMTP username | `resend` | Yes |
+| `EMAIL_HOST_PASSWORD` | SMTP password / API key | `re_...` | Yes |
+| `DEFAULT_FROM_EMAIL` | Sender address for daily briefings | `MorningBrief <onboarding@resend.dev>` | Yes |
+| `TELEGRAM_BOT_TOKEN` | Telegram Bot API Token from @BotFather | `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11` | Optional |
+| `TELEGRAM_BOT_USERNAME` | Telegram Bot username | `MorningBriefBot` | Optional |
+| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 Web Client ID | `...apps.googleusercontent.com` | Optional |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 Web Client Secret | `GOCSPX-...` | Optional |
+| `GOOGLE_REDIRECT_URI` | Google OAuth callback URL | `.../api/v1/connections/gmail/callback/` | Optional |
+| `VITE_API_URL` | Frontend API base URL | `https://morningbrief-api.onrender.com/api/v1` | Yes |
+
+---
+
+## Local Development & Quickstart
+
+### 1. Instant Demo Seeding (Under 1 Minute)
+To test the entire workflow with realistic mock data (recruiter email, GitHub PR review, and tech news):
 
 ```bash
 cd backend
+python manage.py demo_seed
+```
+This automatically creates:
+- **Demo User**: `demo@morningbrief.dev` / `DemoPassword123!`
+- **Sample RawItems**: High-priority recruiter email, critical GitHub PR, tech intelligence articles
+- **Compiled Daily Digest**: Ready for immediate inspection in the Web UI.
 
-# Create and activate virtual environment
+### 2. Backend Setup
+```bash
+cd backend
 python -m venv venv
-
-# Windows (PowerShell)
-.\venv\Scripts\Activate.ps1
-# Linux / macOS
-# source venv/bin/activate
-
-# Install dependencies
+.\venv\Scripts\activate      # Windows (or source venv/bin/activate on Unix)
 pip install -r requirements.txt
-
-# Run migrations (defaults to SQLite if no PostgreSQL is running locally)
 python manage.py migrate
-
-# Run Django system checks
-python manage.py check
-
-# Run automated tests
-python manage.py test apps/accounts
-
-# Start development server
 python manage.py runserver 8000
 ```
 
-### 2. Frontend Setup
-
+### 3. Frontend Setup
 ```bash
 cd frontend
-
-# Install Node dependencies
 npm install
-
-# Run TypeScript strict type-checking
-npm run typecheck
-
-# Run Vite development server
 npm run dev
 ```
-
-The frontend will run at `http://localhost:5173` and automatically proxies `/api` requests to `http://127.0.0.1:8000`.
-
----
-
-## API Endpoints Reference
-
-### Core & Health
-- `GET /api/v1/health/` - System health check (status 200)
-- `GET /api/v1/docs/` - Interactive Swagger OpenAPI UI
-- `GET /api/v1/redoc/` - ReDoc OpenAPI specification
-- `GET /api/v1/schema/` - Raw OpenAPI schema
-
-### Authentication & Accounts (`apps.accounts`)
-- `POST /api/v1/auth/register/` - Register account with timezone and digest preferences
-- `POST /api/v1/auth/login/` - SimpleJWT token pair obtain
-- `POST /api/v1/auth/refresh/` - Rotate access and refresh tokens
-- `POST /api/v1/auth/blacklist/` - Invalidate refresh token on logout
-- `GET/PATCH /api/v1/auth/me/` - Current user account details
-- `GET/PATCH /api/v1/auth/profile/` - UserProfile delivery preferences:
-  - `timezone` (default: `Asia/Kolkata`)
-  - `digest_time` (default: `07:00`)
-  - `delivery_channel` (`email` \| `telegram` \| `both`)
-  - `telegram_chat_id`
-  - `job_hunt_mode` (boolean)
-  - `digest_enabled` (boolean)
-
-### Daily Digest (`apps.digest`)
-- `GET /api/v1/digest/today/` - Current day's ranked briefing
-- `GET /api/v1/digest/` - Historical digests list
-- `POST /api/v1/digest/generate/` - Trigger on-demand AI compilation
-- `POST /api/v1/digest/items/{id}/toggle-read/` - Mark digest item read/unread
-- `POST /api/v1/digest/items/{id}/toggle-archive/` - Archive item
-
-### Data Connections (`apps.connections`)
-- `GET /api/v1/connections/` - List user connected channels (Gmail, GitHub)
-- `POST /api/v1/connections/{id}/sync/` - Trigger manual source re-sync
-
-### Feedback & AI Engine
-- `POST /api/v1/feedback/` - Record user ranking signal (helpful, unhelpful, missed_urgent)
-- `GET /api/v1/llm/status/` - LLM engine availability and models
+Open `http://localhost:5173` in your browser.
 
 ---
 
-## Production SPA Authentication Flow
+## Automated Test Suites
 
-The frontend Axios client (`src/api/client.ts`) implements a **single-flight queued refresh token interceptor**:
-1. When any authenticated API call encounters a `401 Unauthorized`:
-2. If another refresh is already in progress, subsequent failing requests are queued into an asynchronous promise array.
-3. A single `POST /api/v1/auth/refresh/` is dispatched.
-4. Upon receiving the new token pair, the queued requests are retried concurrently with the new Bearer token.
-5. If the refresh token is expired or revoked, the queue is aborted and the user is gracefully logged out.
+### Backend Tests (pytest + pytest-django + factory_boy + responses)
+All core modules (accounts, connections, digest, delivery, feedback, gmail, llm) are rigorously tested:
+```bash
+cd backend
+pytest tests/ --cov=apps --cov-report=term-missing
+```
+Key backend test guarantees:
+- **Accounts**: Registration, login, refresh rotation, rate limiting (5/min).
+- **Connections**: RSS dedup, broken feed handling, cascade deletion, OAuth state verification, and Fernet token encryption roundtrip.
+- **Digest**: Prioritization limits (max 1 urgent, max 3 high), spam exclusion, `job_hunt_mode` recruiter promotion, and daily idempotency.
+- **Delivery**: Email HTML and plain-text rendering (zero emojis), Telegram message truncation ($\le 4096$ chars), and exponential retry backoff.
+- **Feedback**: Weight bump/decay (+1.0 / -1.0) and automatic source spam marking after $\ge 3$ negative ratings.
+- **Gmail**: Token exchange mocked via responses and message ID deduplication.
+
+### Frontend Tests (Vitest + React Testing Library + MSW)
+```bash
+cd frontend
+npm test
+```
+Key frontend test guarantees:
+- **Digest Rendering**: Section-by-section breakdown (News, Actions, Emails).
+- **Optimistic Feedback**: Instant UI feedback state updates with graceful rollback.
+- **Connection Flows**: Provider status indicators and mock states.
+- **Archive Pagination**: Page navigation and boundary controls.
+- **Telegram Linking**: Deep link generation and one-click clipboard copy.
+
+### Zero-Emoji Linter
+```bash
+python scripts/lint_emojis.py
+```
+Scans all frontend source files, backend templates, and scripts to guarantee zero forbidden Unicode emojis.
+
+---
+
+## OAuth & Integration Setup Guides
+
+### 1. Google Cloud / Gmail (Read-Only)
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a project named **MorningBrief**.
+3. Configure **OAuth consent screen**:
+   - User Type: **External**
+   - Test Users: Add your Google email address.
+   - Scopes: `https://www.googleapis.com/auth/gmail.readonly` and `https://www.googleapis.com/auth/userinfo.email`.
+4. Create **OAuth Client ID**:
+   - Application Type: **Web application**
+   - Authorized redirect URIs:
+     - Local: `http://localhost:8000/api/v1/connections/gmail/callback/`
+     - Production: `https://morningbrief-api.onrender.com/api/v1/connections/gmail/callback/`
+5. Copy `Client ID` and `Client Secret` into your `.env`.
+
+### 2. Telegram Bot Setup
+1. In Telegram, search for `@BotFather` and send `/newbot`.
+2. Name your bot (e.g., `MorningBriefBot`).
+3. Copy the HTTP API token into `TELEGRAM_BOT_TOKEN` in `.env`.
+4. In the MorningBrief Web App, navigate to **Connections -> Telegram -> Connect Telegram**.
+5. Click the generated deep link to open Telegram and send `/start <token>` to link your chat ID.
+
+---
+
+## Production Deployment
+
+### 1. Render (Backend API + Celery Worker/Beat)
+MorningBrief provides a multi-service blueprint in [`render.yaml`](file:///c:/Users/Vanshaj%20sharma/Desktop/Django-small-projects/Morning-Brief/render.yaml):
+- **Web Service (`morningbrief-api`)**:
+  - Command: `gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --timeout 120`
+  - Health check: `/api/v1/health/`
+- **Worker Service (`morningbrief-worker`)**:
+  - Command: `celery -A config worker --beat -l info`
+- Connect your **Neon Postgres** database URL to `DATABASE_URL`.
+- Connect your **Upstash Redis** URL to `REDIS_URL`.
+
+### 2. Vercel (Frontend SPA)
+The frontend includes [`frontend/vercel.json`](file:///c:/Users/Vanshaj%20sharma/Desktop/Django-small-projects/Morning-Brief/frontend/vercel.json) with SPA rewrites:
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+Set the following build settings in Vercel:
+- **Framework Preset**: Vite
+- **Root Directory**: `frontend`
+- **Environment Variables**:
+  - `VITE_API_URL`: `https://morningbrief-api.onrender.com/api/v1`
+
+---
+
+## Security & GDPR Compliance
+
+- **Token Encryption**: All OAuth access tokens and refresh tokens are encrypted at rest using Fernet symmetric encryption. Stored tokens are never logged in plaintext.
+- **Rate Limiting**:
+  - Authentication: `5 requests / minute`
+  - Feedback: `20 requests / minute`
+  - Manual Generation: `3 requests / hour / user`
+- **GDPR Account Deletion**:
+  - `POST /api/v1/auth/delete-account/` performs an atomic, transactional purge of all associated RawItems, Connections, Digests, Feedbacks, and TokenUsage logs.
+
+---
+
+## License
+MIT License. Built with Django, React 19, Celery, and Tailwind CSS.

@@ -13,24 +13,24 @@ export const ToastContainer: React.FC = () => {
       case 'success':
         return <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
       case 'warning':
-        return <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+        return <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
       case 'error':
-        return <AlertCircle className="w-5 h-5 text-rose shrink-0" />
+        return <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
       default:
-        return <Info className="w-5 h-5 text-primary shrink-0" />
+        return <Info className="w-5 h-5 text-indigo-600 shrink-0" />
     }
   }
 
   const getBorderColor = (type: ToastType) => {
     switch (type) {
       case 'success':
-        return 'border-emerald-200 bg-white'
+        return 'border-emerald-200 bg-white/95 backdrop-blur-md shadow-lg'
       case 'warning':
-        return 'border-amber-200 bg-white'
+        return 'border-amber-200 bg-white/95 backdrop-blur-md shadow-lg'
       case 'error':
-        return 'border-rose-200 bg-white'
+        return 'border-rose-200 bg-white/95 backdrop-blur-md shadow-lg'
       default:
-        return 'border-primary-200 bg-white'
+        return 'border-zinc-200/80 bg-white/95 backdrop-blur-md shadow-lg'
     }
   }
 
@@ -41,13 +41,13 @@ export const ToastContainer: React.FC = () => {
           key={toast.id}
           role="status"
           className={cn(
-            'pointer-events-auto flex items-start gap-3 p-4 rounded-xl border shadow-lg transition-all transform duration-200 translate-y-0',
+            'pointer-events-auto flex items-start gap-3 p-4 rounded-xl border transition-all duration-200 ease-out',
             getBorderColor(toast.type)
           )}
         >
           {getIcon(toast.type)}
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-semibold text-zinc-900 leading-tight">
+            <h4 className="text-[14px] font-semibold text-zinc-900 leading-tight">
               {toast.title}
             </h4>
             {toast.description && (
@@ -58,10 +58,10 @@ export const ToastContainer: React.FC = () => {
           </div>
           <button
             onClick={() => removeToast(toast.id)}
-            className="text-zinc-400 hover:text-zinc-600 p-0.5 rounded transition-colors"
+            className="text-zinc-400 hover:text-zinc-600 p-1 rounded-lg hover:bg-zinc-100 transition-colors"
             aria-label="Close notification"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       ))}

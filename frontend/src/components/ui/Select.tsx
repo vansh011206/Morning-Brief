@@ -35,12 +35,12 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             id={selectId}
             disabled={disabled}
             className={cn(
-              'w-full h-10 px-3.5 pr-10 text-sm bg-white border rounded-lg transition-colors appearance-none cursor-pointer',
-              'text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary',
+              'w-full h-11 px-3.5 pr-10 text-[14px] bg-white border rounded-xl shadow-xs transition-all appearance-none cursor-pointer',
+              'text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500',
               'disabled:bg-zinc-50 disabled:text-zinc-400 disabled:cursor-not-allowed',
               error
-                ? 'border-rose focus:ring-rose/40 focus:border-rose'
-                : 'border-zinc-300 hover:border-zinc-400',
+                ? 'border-rose-500 focus:ring-rose-500/20 focus:border-rose-500'
+                : 'border-zinc-200 hover:border-zinc-300',
               className
             )}
             {...props}

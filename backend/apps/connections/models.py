@@ -59,6 +59,12 @@ class Connection(models.Model):
         blank=True,
         help_text='OAuth access/refresh token or secret (if applicable)'
     )
+    avatar_url = models.URLField(
+        max_length=1024,
+        blank=True,
+        default='',
+        help_text='Profile avatar URL from OAuth provider'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

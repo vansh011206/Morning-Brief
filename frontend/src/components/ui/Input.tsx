@@ -39,7 +39,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
         <div className="relative flex items-center">
           {leftIcon && (
-            <div className="absolute left-3 flex items-center pointer-events-none text-zinc-400">
+            <div className="absolute left-3.5 flex items-center pointer-events-none text-zinc-400">
               {leftIcon}
             </div>
           )}
@@ -49,26 +49,25 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             type={type}
             disabled={disabled}
             className={cn(
-              'w-full h-10 px-3.5 text-sm bg-white border rounded-lg transition-colors placeholder:text-zinc-400',
-              'text-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary',
+              'w-full h-12 px-5 text-[14px] bg-white border border-zinc-200 rounded-full shadow-xs transition-all duration-200',
+              'text-zinc-900 placeholder:text-zinc-400',
+              'focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900',
               'disabled:bg-zinc-50 disabled:text-zinc-400 disabled:cursor-not-allowed',
-              leftIcon && 'pl-10',
-              rightIcon && 'pr-10',
-              error
-                ? 'border-rose focus:ring-rose/40 focus:border-rose'
-                : 'border-zinc-300 hover:border-zinc-400',
+              leftIcon && 'pl-11',
+              rightIcon && 'pr-11',
+              error && 'border-rose-500 focus:ring-rose-500/20 focus:border-rose-500',
               className
             )}
             {...props}
           />
           {rightIcon && (
-            <div className="absolute right-3 flex items-center text-zinc-400">
+            <div className="absolute right-3.5 flex items-center text-zinc-400">
               {rightIcon}
             </div>
           )}
         </div>
         {error ? (
-          <p className="text-xs text-rose font-medium mt-1">{error}</p>
+          <p className="text-xs text-rose-600 font-medium mt-1">{error}</p>
         ) : helperText ? (
           <p className="text-xs text-zinc-500 mt-1">{helperText}</p>
         ) : null}

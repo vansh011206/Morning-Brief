@@ -41,7 +41,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     <div className={cn('relative inline-flex shrink-0 select-none', className)}>
       <div
         className={cn(
-          'rounded-full overflow-hidden flex items-center justify-center font-medium bg-gradient-to-tr from-primary-600 to-indigo-400 text-white shadow-sm ring-2 ring-white',
+          'rounded-full overflow-hidden flex items-center justify-center font-medium bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white shadow-xs ring-2 ring-white',
           sizeStyles[size]
         )}
       >

@@ -26,27 +26,27 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.98]'
+      'inline-flex items-center justify-center font-semibold select-none transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20 focus-visible:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.98]'
 
     const variantStyles = {
       primary:
-        'bg-primary text-white hover:bg-primary-hover focus-visible:ring-primary shadow-sm hover:shadow-soft-glow',
+        'bg-zinc-900 text-white shadow-lg hover:bg-black hover:shadow-xl hover:-translate-y-px active:scale-[0.98]',
       secondary:
-        'bg-zinc-100 text-zinc-900 hover:bg-zinc-200 focus-visible:ring-zinc-400 border border-zinc-200/80',
+        'bg-white border border-zinc-200 text-zinc-700 shadow-xs hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-sm',
       outline:
-        'border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 hover:border-zinc-400 focus-visible:ring-primary',
+        'border border-zinc-200 bg-white text-zinc-700 shadow-xs hover:bg-zinc-50 hover:border-zinc-300 hover:text-zinc-900',
       ghost:
-        'bg-transparent text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:ring-zinc-300',
+        'bg-transparent text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 active:bg-zinc-200/70',
       danger:
-        'bg-rose text-white hover:bg-rose-600 focus-visible:ring-rose-500 shadow-sm',
+        'bg-gradient-to-b from-rose-600 to-rose-700 text-white shadow-sm hover:from-rose-700 hover:to-rose-800',
       amber:
-        'bg-amber-sunrise text-white hover:bg-amber-600 focus-visible:ring-amber-500 shadow-sm hover:shadow-amber-glow',
+        'bg-gradient-to-b from-amber-500 to-amber-600 text-white shadow-amber hover:from-amber-600 hover:to-amber-700',
     }
 
     const sizeStyles = {
-      sm: 'text-xs px-3 py-1.5 gap-1.5 h-8',
-      md: 'text-sm px-4 py-2 gap-2 h-10',
-      lg: 'text-base px-5 py-2.5 gap-2.5 h-11',
+      sm: 'h-8 px-3.5 text-xs gap-1.5 rounded-full',
+      md: 'h-10 px-5 text-[14px] gap-2 rounded-full',
+      lg: 'h-12 px-6 text-base gap-2.5 rounded-full',
     }
 
     return (
@@ -57,12 +57,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {isLoading ? (
-          <Loader2 className="w-4 h-4 animate-spin text-current" />
+          <Loader2 className="w-4 h-4 animate-spin text-current shrink-0" />
         ) : (
-          leftIcon
+          leftIcon && <span className="shrink-0">{leftIcon}</span>
         )}
         <span>{children}</span>
-        {!isLoading && rightIcon}
+        {!isLoading && rightIcon && <span className="shrink-0">{rightIcon}</span>}
       </button>
     )
   }

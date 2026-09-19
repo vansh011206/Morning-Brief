@@ -2,42 +2,19 @@ import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
-  Archive,
-  Calendar,
   Search,
   ChevronRight,
-  ExternalLink,
   ChevronLeft,
+  Inbox,
+  Sparkles,
+  CheckCircle2,
+  X,
   Clock,
 } from 'lucide-react'
-import {
-  Input,
-  Card,
-  Badge,
-  Skeleton,
-  Modal,
-  Button,
-  EmptyState,
-} from '../components/ui'
+import { Input } from '../components/ui'
+import { DigestItemCard } from '../features/digest/DigestItemCard'
 import { digestApi } from '../api/digest'
-import type { Digest, DigestItem, DigestSectionKey } from '../api/types'
-
-const SECTION_BORDER_COLORS: Record<DigestSectionKey, string> = {
-  news: 'border-l-indigo-600',
-  actions: 'border-l-amber-500',
-  emails: 'border-l-sky-500',
-  money: 'border-l-emerald-500',
-  events: 'border-l-purple-500',
-}
-
-const SECTION_BADGE_VARIANTS: Record<DigestSectionKey, 'indigo' | 'amber' | 'emerald' | 'rose' | 'zinc'> = {
-  news: 'indigo',
-  actions: 'amber',
-  emails: 'indigo',
-  money: 'emerald',
-  events: 'zinc',
-}
-
+import type { Digest, DigestItem } from '../api/types'
 
 function formatDateSafe(dateStr: string, formatPattern: string): string {
   try {
@@ -70,7 +47,7 @@ export const ArchivePage: React.FC = () => {
   const pageSize = 10
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
 
-  // Local filter for search query
+  // Filter digests based on search query
   const filteredDigests = digests.filter((d) => {
     if (!searchQuery.trim()) return true
     const q = searchQuery.toLowerCase()
@@ -89,326 +66,220 @@ export const ArchivePage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-16 px-2 sm:px-0">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-zinc-200/80 pb-6">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 relative">
+      {/* Ambient Canvas Mesh Blobs */}
+      <div className="absolute top-0 left-1/4 w-[400px] h-[400px] bg-indigo-500/6 rounded-full blur-[80px] pointer-events-none -z-10" />
+      <div className="absolute top-12 right-1/4 w-[350px] h-[350px] bg-amber-500/5 rounded-full blur-[70px] pointer-events-none -z-10" />
+
+      {/* Header */}
+      <div className="border-b border-zinc-200/80 pb-6 mb-6">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-display font-bold text-2xl sm:text-3xl text-zinc-900 tracking-tight">
-              Digest Archive
-            </h1>
-            <Badge variant="indigo" size="sm">
-              Historical Records
-            </Badge>
-          </div>
-          <p className="text-xs sm:text-sm text-zinc-500 mt-1">
-            Access past executive morning summaries, inspect delivered email briefs, and review historical briefings.
+          <h1 className="font-display font-bold text-[28px] text-zinc-900 tracking-tight leading-tight">
+            Archive
+          </h1>
+          <p className="text-[14px] text-zinc-500 mt-1">
+            Historical synthesized briefings archive
           </p>
         </div>
 
-        <div className="flex items-center gap-2 font-mono text-xs text-zinc-500 bg-zinc-100/80 px-3 py-1.5 rounded-lg border border-zinc-200">
-          <Archive className="w-3.5 h-3.5 text-zinc-500" />
-          <span>{totalCount} Total Briefings</span>
+        {/* Search Input with Cmd+K hint */}
+        <div className="mt-5 relative">
+          <Input
+            type="text"
+            placeholder="Search past briefings by keywords, topics, headlines..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            leftIcon={<Search className="w-4 h-4 text-zinc-400" strokeWidth={1.75} />}
+            rightIcon={
+              <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-[11px] font-mono font-semibold text-zinc-500 bg-zinc-100 border border-zinc-200 rounded-full">
+                ⌘K
+              </kbd>
+            }
+          />
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Input
-          placeholder="Search past briefings by keywords, topics, headlines..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          leftIcon={<Search className="w-4 h-4" />}
-          className="bg-white"
-        />
-      </div>
-
-      {/* Digest List */}
+      {/* List: Vertical Timeline with Date Groups */}
       <div className="space-y-3">
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((n) => (
               <div
                 key={n}
-                className="p-5 bg-white rounded-xl border border-zinc-200/80 flex items-center justify-between animate-pulse"
+                className="rounded-[20px] bg-white border border-zinc-200/80 p-5 sm:p-6 flex items-center justify-between shadow-xs"
               >
-                <div className="space-y-2 w-2/3">
-                  <Skeleton className="w-40 h-4" />
-                  <Skeleton className="w-full h-4" />
-                  <Skeleton className="w-28 h-3" />
+                <div className="flex items-center gap-4 w-2/3">
+                  <div className="w-12 h-10 rounded-lg bg-zinc-100 animate-pulse" />
+                  <div className="space-y-2 w-full">
+                    <div className="w-40 h-4 rounded bg-zinc-100 animate-pulse" />
+                    <div className="w-24 h-3 rounded bg-zinc-100 animate-pulse" />
+                  </div>
                 </div>
-                <Skeleton className="w-8 h-8 rounded-lg" />
+                <div className="w-8 h-8 rounded-xl bg-zinc-100 animate-pulse" />
               </div>
             ))}
           </div>
         ) : filteredDigests.length === 0 ? (
-          <EmptyState
-            icon={<Calendar className="w-8 h-8 text-zinc-400" />}
-            title={searchQuery ? 'No matching briefings' : 'No past briefings found'}
-            description={
-              searchQuery
-                ? `No digests matched "${searchQuery}". Try different keywords.`
-                : 'Your daily briefs will accumulate here every morning as they are generated and delivered.'
-            }
-          />
+          /* Empty State */
+          <div className="rounded-[24px] border-dashed border-2 border-zinc-200 bg-white/50 p-12 text-center flex flex-col items-center justify-center">
+            <div className="w-12 h-12 rounded-[20px] bg-gradient-to-b from-zinc-50 to-white border border-zinc-200 shadow-xs flex items-center justify-center text-zinc-400 mb-4">
+              <Inbox className="w-6 h-6 text-zinc-400" strokeWidth={1.75} />
+            </div>
+            <h3 className="font-display font-semibold text-[18px] text-zinc-900">
+              {searchQuery ? 'No matching briefings' : 'No past briefings found'}
+            </h3>
+            <p className="text-[14px] text-zinc-500 mt-1 max-w-sm leading-normal">
+              {searchQuery
+                ? `No digests matched "${searchQuery}". Try different search terms.`
+                : 'Your daily briefs will accumulate here every morning as they are generated and delivered.'}
+            </p>
+          </div>
         ) : (
           filteredDigests.map((digest) => {
-            const formattedDate = formatDateSafe(digest.digest_date, 'EEEE, d MMM yyyy')
+            const dayNumber = formatDateSafe(digest.digest_date, 'd')
+            const monthText = formatDateSafe(digest.digest_date, 'MMM yyyy')
             const isDelivered = digest.status === 'delivered' || !!digest.delivered_at
-            const deliveryTime = digest.delivered_at
-              ? formatDateSafe(digest.delivered_at, 'h:mm a')
-              : null
-
-            // Preview headline from first item
-            const firstItem = digest.items && digest.items.length > 0 ? digest.items[0] : null
-            const headline = firstItem
-              ? firstItem.source_title
-              : `${digest.item_count} items synthesized across news and communications`
 
             return (
-              <Card
+              <div
                 key={digest.id}
-                hoverable
                 onClick={() => handleOpenDetail(digest)}
-                className="p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer transition-all hover:border-primary/40 hover:shadow-sm"
+                className="rounded-[20px] bg-white border border-zinc-200/80 shadow-xs hover:shadow-md hover:-translate-y-[1px] transition-all duration-200 p-5 sm:p-6 flex items-center justify-between group cursor-pointer"
               >
-                <div className="flex items-start sm:items-center gap-4 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-600 shrink-0 border border-zinc-200">
-                    <Calendar className="w-5 h-5 text-zinc-600" />
+                {/* Left Block */}
+                <div className="flex items-center min-w-0">
+                  {/* Date block: Day Sora 22px 700 ink, month 12px uppercase muted */}
+                  <div className="flex flex-col items-center justify-center min-w-[56px] text-center shrink-0">
+                    <span className="font-display font-bold text-[22px] text-zinc-900 leading-none">
+                      {dayNumber}
+                    </span>
+                    <span className="text-[12px] uppercase text-zinc-500 tracking-wide font-medium mt-1">
+                      {monthText}
+                    </span>
                   </div>
 
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-semibold text-zinc-900">
-                        {formattedDate}
+                  {/* Vertical Divider: 1px h-10 bg-zinc-200 mx-4 */}
+                  <div className="w-px h-10 bg-zinc-200 mx-4 shrink-0" />
+
+                  {/* Stats & Metadata */}
+                  <div className="flex items-center gap-2.5 flex-wrap min-w-0">
+                    {/* Inbox count stat */}
+                    <span className="rounded-full bg-zinc-50 border border-zinc-200/80 px-2.5 py-1 text-[11px] font-medium text-zinc-600 flex items-center gap-1.5 select-none">
+                      <Inbox className="w-3 h-3 text-zinc-400" strokeWidth={1.75} />
+                      <span>{digest.item_count} items</span>
+                    </span>
+
+                    {/* Sparkles important count */}
+                    {digest.important_count > 0 && (
+                      <span className="rounded-full bg-amber-50 border border-amber-200/80 px-2.5 py-1 text-[11px] font-medium text-amber-700 flex items-center gap-1.5 select-none">
+                        <Sparkles className="w-3 h-3 text-amber-500" strokeWidth={1.75} />
+                        <span>{digest.important_count} high priority</span>
                       </span>
+                    )}
 
-                      {isDelivered ? (
-                        <Badge variant="emerald" dot size="sm">
-                          Delivered {deliveryTime ? `at ${deliveryTime}` : ''}
-                        </Badge>
-                      ) : digest.status === 'ready' ? (
-                        <Badge variant="indigo" dot size="sm">
-                          Ready in App
-                        </Badge>
-                      ) : (
-                        <Badge variant="amber" dot size="sm">
-                          {digest.status_display || 'Processing'}
-                        </Badge>
-                      )}
-
-                      {digest.important_count > 0 && (
-                        <Badge variant="rose" size="sm">
-                          {digest.important_count} High Priority
-                        </Badge>
-                      )}
-                    </div>
-
-                    <h4 className="text-sm font-medium text-zinc-800 truncate">
-                      {headline}
-                    </h4>
-
-                    <div className="flex items-center gap-3 text-xs text-zinc-400 font-mono">
-                      <span>{digest.item_count} ranked items</span>
-                      <span>&bull;</span>
-                      <span>AI Cost: {digest.llm_cost_cents}¢</span>
-                    </div>
+                    {/* Delivery Status */}
+                    {isDelivered ? (
+                      <span className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2.5 py-1 text-[11px] font-medium flex items-center gap-1.5 select-none">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" strokeWidth={2} />
+                        <span>Delivered</span>
+                      </span>
+                    ) : digest.status === 'ready' ? (
+                      <span className="rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 px-2.5 py-1 text-[11px] font-medium flex items-center gap-1.5 select-none">
+                        Ready
+                      </span>
+                    ) : null}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs font-medium text-primary hidden sm:inline">
-                    View Briefing
-                  </span>
-                  <div className="w-8 h-8 rounded-lg bg-zinc-50 border border-zinc-200 flex items-center justify-center text-zinc-400 group-hover:text-primary">
-                    <ChevronRight className="w-4 h-4 text-zinc-500" />
-                  </div>
+                {/* Right: Chevron inside 32px rounded-xl tile */}
+                <div className="w-8 h-8 rounded-xl bg-zinc-50 group-hover:bg-indigo-50 group-hover:text-indigo-600 text-zinc-400 flex items-center justify-center shrink-0 transition-all duration-200 ml-3">
+                  <ChevronRight
+                    className="w-[18px] h-[18px] group-hover:translate-x-0.5 transition-transform duration-200"
+                    strokeWidth={1.75}
+                  />
                 </div>
-              </Card>
+              </div>
             )
           })
         )}
       </div>
 
-      {/* Pagination Controls */}
+      {/* Pagination: Rounded-full pill buttons */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4 border-t border-zinc-200/80">
-          <Button
-            variant="outline"
-            size="sm"
+        <div className="flex items-center justify-center gap-2 pt-8">
+          <button
+            type="button"
             disabled={currentPage <= 1 || isFetching}
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            leftIcon={<ChevronLeft className="w-4 h-4" />}
+            className="rounded-full h-8 px-3.5 text-[13px] font-medium border border-zinc-200 bg-white hover:bg-zinc-50 shadow-xs flex items-center gap-1.5 text-zinc-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Previous
-          </Button>
+            <ChevronLeft className="w-3.5 h-3.5 text-zinc-500" strokeWidth={1.75} />
+            <span>Previous</span>
+          </button>
 
-          <span className="text-xs font-mono text-zinc-500">
-            Page {currentPage} of {totalPages}
+          <span className="text-[12px] font-mono text-zinc-400 px-3 tabular-nums">
+            {currentPage} of {totalPages}
           </span>
 
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            type="button"
             disabled={currentPage >= totalPages || isFetching}
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            rightIcon={<ChevronRight className="w-4 h-4" />}
+            className="rounded-full h-8 px-3.5 text-[13px] font-medium border border-zinc-200 bg-white hover:bg-zinc-50 shadow-xs flex items-center gap-1.5 text-zinc-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Next
-          </Button>
+            <span>Next</span>
+            <ChevronRight className="w-3.5 h-3.5 text-zinc-500" strokeWidth={1.75} />
+          </button>
         </div>
       )}
 
-      {/* Full Digest Detail Modal Styled Like the Morning Email */}
-      {selectedDigest && (
-        <Modal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          size="xl"
-        >
-          <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-1">
-            {/* Modal Header Band (Simulating Email Header) */}
-            <div className="rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 text-white shadow-sm space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-white/20 border border-white/30 flex items-center justify-center text-white font-bold text-sm">
-                    M
-                  </div>
-                  <span className="font-display font-bold text-lg tracking-tight">
-                    MorningBrief
-                  </span>
-                </div>
-                <Badge variant="indigo" size="sm" className="bg-white/20 text-white border-white/30">
-                  {selectedDigest.status === 'delivered' ? 'Email Dispatched' : 'Compiled Briefing'}
-                </Badge>
-              </div>
-
+      {/* Detail Modal: Overlay bg-zinc-900/20 backdrop-blur-sm, panel bg-white rounded-[24px] shadow-lg */}
+      {isModalOpen && selectedDigest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/20 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[24px] shadow-lg max-w-3xl w-full max-h-[85vh] overflow-hidden border border-zinc-200/80 flex flex-col relative animate-in zoom-in-95 duration-200">
+            {/* Sticky Modal Header */}
+            <div className="sticky top-0 bg-white/80 backdrop-blur-xl border-b border-zinc-200/60 p-5 sm:p-6 flex items-center justify-between z-10 shrink-0">
               <div>
-                <h2 className="text-xl font-bold font-display">
-                  {formatDateSafe(selectedDigest.digest_date, 'EEEE, MMMM d, yyyy')}
+                <h2 className="font-display font-semibold text-[18px] text-zinc-900 tracking-tight">
+                  Morning Brief • {formatDateSafe(selectedDigest.digest_date, 'EEEE, d MMM yyyy')}
                 </h2>
-                <p className="text-xs text-indigo-200 mt-0.5">
-                  {selectedDigest.item_count} items synthesized &bull;{' '}
-                  {selectedDigest.important_count} high priority &bull; AI cost: {selectedDigest.llm_cost_cents}¢
-                </p>
+                <div className="flex items-center gap-2 text-[12px] text-zinc-500 mt-0.5">
+                  <Clock className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
+                  <span>
+                    {selectedDigest.delivered_at
+                      ? `Delivered at ${formatDateSafe(selectedDigest.delivered_at, 'h:mm a')}`
+                      : 'Saved in archive'}
+                  </span>
+                  <span>•</span>
+                  <span>{selectedDigest.item_count} items</span>
+                </div>
               </div>
+
+              {/* Close Button: 36px rounded-xl hover:bg-zinc-100 */}
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                aria-label="Close dialog"
+                className="w-9 h-9 rounded-xl hover:bg-zinc-100 flex items-center justify-center text-zinc-400 hover:text-zinc-700 transition-colors"
+              >
+                <X className="w-5 h-5" strokeWidth={1.75} />
+              </button>
             </div>
 
-            {/* Delivery Metadata Strip */}
-            <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-50 border border-zinc-200/80 text-xs">
-              <div className="flex items-center gap-2 text-zinc-600">
-                <Clock className="w-3.5 h-3.5 text-zinc-400" />
-                <span>
-                  {selectedDigest.delivered_at
-                    ? `Delivered on ${formatDateSafe(selectedDigest.delivered_at, 'MMM d, yyyy · h:mm a')}`
-                    : 'Compiled and stored in archive'}
-                </span>
-              </div>
-              <Badge variant={selectedDigest.status === 'delivered' ? 'emerald' : 'indigo'} size="sm">
-                {selectedDigest.status_display || selectedDigest.status}
-              </Badge>
-            </div>
-
-            {/* Digest Sections and Items */}
-            <div className="space-y-6">
-              {selectedDigest.sections && Object.keys(selectedDigest.sections).length > 0 ? (
-                Object.values(selectedDigest.sections).map((sectionGroup) => {
-                  const borderClass =
-                    SECTION_BORDER_COLORS[sectionGroup.key as DigestSectionKey] || 'border-l-indigo-500'
-                  const badgeVariant =
-                    SECTION_BADGE_VARIANTS[sectionGroup.key as DigestSectionKey] || 'default'
-
-                  return (
-                    <div key={sectionGroup.key} className="space-y-3">
-                      {/* Section Title */}
-                      <div className="flex items-center justify-between pb-1.5 border-b border-zinc-200">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold uppercase tracking-wider text-zinc-800">
-                            {sectionGroup.title}
-                          </span>
-                        </div>
-                        <Badge variant={badgeVariant} size="sm">
-                          {sectionGroup.count}
-                        </Badge>
-                      </div>
-
-                      {/* Items */}
-                      <div className="space-y-2.5">
-                        {sectionGroup.items.map((item: DigestItem) => (
-                          <div
-                            key={item.id}
-                            className={`p-4 rounded-xl bg-zinc-50 border border-zinc-200/90 border-l-4 ${borderClass} space-y-2`}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-[11px] font-semibold text-zinc-600 bg-white px-2 py-0.5 rounded border border-zinc-200">
-                                  {item.source_name || 'Feed Source'}
-                                </span>
-                                {item.author && (
-                                  <span className="text-[11px] text-zinc-400">
-                                    by {item.author}
-                                  </span>
-                                )}
-                              </div>
-
-                              {item.priority === 'urgent' && (
-                                <Badge variant="rose" size="sm">
-                                  Urgent
-                                </Badge>
-                              )}
-                              {item.priority === 'high' && (
-                                <Badge variant="amber" size="sm">
-                                  High
-                                </Badge>
-                              )}
-                            </div>
-
-                            <h4 className="text-sm font-semibold text-zinc-900 leading-snug">
-                              {item.source_title}
-                            </h4>
-
-                            <p className="text-xs text-zinc-600 leading-relaxed">
-                              {item.summary}
-                            </p>
-
-                            {item.source_url && (
-                              <div className="pt-1">
-                                <a
-                                  href={item.source_url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary-hover"
-                                >
-                                  <span>Read source article</span>
-                                  <ExternalLink className="w-3 h-3" />
-                                </a>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })
+            {/* Modal Body: overflow-y-auto with DigestItemCard styling */}
+            <div className="p-5 sm:p-6 overflow-y-auto divide-y divide-zinc-100">
+              {selectedDigest.items && selectedDigest.items.length > 0 ? (
+                selectedDigest.items.map((item: DigestItem) => (
+                  <DigestItemCard key={item.id} item={item} />
+                ))
               ) : (
-                <div className="p-6 text-center text-zinc-500 text-sm bg-zinc-50 rounded-xl border border-zinc-200">
-                  No individual items recorded for this briefing date.
+                <div className="py-12 text-center text-zinc-500 text-sm">
+                  No items recorded for this briefing date.
                 </div>
               )}
             </div>
-
-            {/* Modal Footer */}
-            <div className="flex items-center justify-end pt-4 border-t border-zinc-200">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsModalOpen(false)}
-              >
-                Close Briefing
-              </Button>
-            </div>
           </div>
-        </Modal>
+        </div>
       )}
     </div>
   )

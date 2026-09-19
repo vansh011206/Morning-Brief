@@ -1,5 +1,10 @@
 from rest_framework import serializers, generics, permissions
+from rest_framework.throttling import UserRateThrottle
 from .models import ItemFeedback
+
+
+class FeedbackRateThrottle(UserRateThrottle):
+    scope = 'feedback'
 
 
 class ItemFeedbackSerializer(serializers.ModelSerializer):
@@ -23,6 +28,7 @@ class ItemFeedbackCreateView(generics.CreateAPIView):
     Submit feedback on a ranked digest item.
     """
     permission_classes = (permissions.IsAuthenticated,)
+    throttle_classes = (FeedbackRateThrottle,)
     serializer_class = ItemFeedbackSerializer
 
     def perform_create(self, serializer):

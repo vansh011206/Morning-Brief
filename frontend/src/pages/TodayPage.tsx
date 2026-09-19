@@ -1,35 +1,32 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
+  Sun,
   Sparkles,
   ExternalLink,
   Rss,
   RefreshCw,
   Coffee,
-  TrendingUp,
-  Mail,
   CheckCircle2,
+  TrendingUp,
+  Newspaper,
+  Github,
+  Calendar,
+  Banknote,
+  Layers,
+  Clock,
+  Mail,
+  Zap,
 } from 'lucide-react'
-import {
-  Button,
-  Badge,
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-  SegmentedTabs,
-  SkeletonFeedCard,
-  EmptyState,
-} from '../components/ui'
 import { useToastStore } from '../store/useToastStore'
 import { useAuthStore } from '../store/useAuthStore'
 import { digestApi } from '../api/digest'
 import { ingestorApi } from '../api/ingestor'
 import { DigestSection } from '../features/digest/DigestSection'
-import type { Digest, RawItem } from '../api/types'
+import { cn } from '../utils/cn'
+import type { Digest, RawItem, RawItemType } from '../api/types'
 
 function formatRelativeTime(dateString: string): string {
   try {
@@ -43,18 +40,22 @@ function formatRelativeTime(dateString: string): string {
   }
 }
 
+type PipelineCategory = 'all' | 'news' | 'email' | 'pr' | 'bill' | 'event' | 'other'
+
 export const TodayPage: React.FC = () => {
   const queryClient = useQueryClient()
   const { user } = useAuthStore()
   const { addToast } = useToastStore()
 
   const [viewMode, setViewMode] = useState<'digest' | 'raw'>('digest')
+  const [pipelineCategory, setPipelineCategory] = useState<PipelineCategory>('all')
 
   // Fetch today's digest
   const {
     data: digest,
     isLoading: isDigestLoading,
     isFetching: isDigestFetching,
+    refetch: refetchDigest,
   } = useQuery<Digest>({
     queryKey: ['todayDigest'],
     queryFn: digestApi.getTodayDigest,
@@ -83,14 +84,14 @@ export const TodayPage: React.FC = () => {
       if (variables === true) {
         addToast({
           type: 'success',
-          title: 'Email Briefing Dispatched',
+          title: 'Briefing Dispatched',
           description: `Dispatched ${newDigest.item_count} synthesized items to your email.`,
         })
       } else {
         addToast({
           type: 'success',
-          title: 'Digest Compiled',
-          description: `Synthesized ${newDigest.item_count} items across ${
+          title: 'Briefing Synthesized',
+          description: `Compiled ${newDigest.item_count} items across ${
             Object.keys(newDigest.sections || {}).length
           } sections.`,
         })
@@ -105,287 +106,378 @@ export const TodayPage: React.FC = () => {
     },
   })
 
-  const mainViewTabs = [
-    { id: 'digest', label: 'Morning Digest' },
-    {
-      id: 'raw',
-      label: 'Live Raw Feed Pipeline',
-      badge: rawItems.length > 0 ? rawItems.length : undefined,
-    },
-  ]
+  // Pipeline category counts & tabs
+  const categoryCounts = useMemo(() => {
+    return {
+      all: rawItems.length,
+      news: rawItems.filter((i) => i.type === 'news').length,
+      email: rawItems.filter((i) => i.type === 'email').length,
+      pr: rawItems.filter((i) => i.type === 'pr').length,
+      bill: rawItems.filter((i) => i.type === 'bill').length,
+      event: rawItems.filter((i) => i.type === 'event').length,
+      other: rawItems.filter(
+        (i) => !['news', 'email', 'pr', 'bill', 'event'].includes(i.type)
+      ).length,
+    }
+  }, [rawItems])
 
-  // Date Header & Greeting
-  const todayFormatted = format(new Date(), 'EEEE, d MMM')
-  const firstName = user?.first_name || user?.name?.split(' ')[0] || 'there'
+  const pipelineTabs = useMemo(() => {
+    const tabs: { id: PipelineCategory; label: string; count: number; icon: React.ReactNode }[] = [
+      { id: 'all', label: 'All Raw Items', count: categoryCounts.all, icon: <Layers className="w-3.5 h-3.5" /> },
+      { id: 'news', label: 'News & RSS', count: categoryCounts.news, icon: <Newspaper className="w-3.5 h-3.5" /> },
+      { id: 'email', label: 'Emails', count: categoryCounts.email, icon: <Mail className="w-3.5 h-3.5" /> },
+      { id: 'pr', label: 'GitHub / PRs', count: categoryCounts.pr, icon: <Github className="w-3.5 h-3.5" /> },
+    ]
 
+    if (categoryCounts.bill > 0) {
+      tabs.push({ id: 'bill', label: 'Bills', count: categoryCounts.bill, icon: <Banknote className="w-3.5 h-3.5" /> })
+    }
+    if (categoryCounts.event > 0) {
+      tabs.push({ id: 'event', label: 'Events', count: categoryCounts.event, icon: <Calendar className="w-3.5 h-3.5" /> })
+    }
+    if (categoryCounts.other > 0) {
+      tabs.push({ id: 'other', label: 'Other', count: categoryCounts.other, icon: <Layers className="w-3.5 h-3.5" /> })
+    }
+
+    return tabs
+  }, [categoryCounts])
+
+  const filteredRawItems = useMemo(() => {
+    if (pipelineCategory === 'all') return rawItems
+    if (pipelineCategory === 'other') {
+      return rawItems.filter(
+        (i) => !['news', 'email', 'pr', 'bill', 'event'].includes(i.type)
+      )
+    }
+    return rawItems.filter((i) => i.type === pipelineCategory)
+  }, [rawItems, pipelineCategory])
+
+  const todayFormatted = format(new Date(), 'EEEE, d MMMM')
+  const firstName = user?.first_name || user?.name?.split(' ')[0] || 'Vanshaj'
   const hasItems = digest && digest.items && digest.items.length > 0
   const sectionsList = digest?.sections ? Object.values(digest.sections) : []
   const isDelivered = digest?.status === 'delivered' || !!digest?.delivered_at
 
-  return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-14 px-2 sm:px-0">
-      {/* Page Header with Greeting & Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-zinc-200/80 pb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
-              {todayFormatted}
-            </span>
-            <Badge variant="indigo" size="sm">
-              Daily Synthesis
-            </Badge>
-          </div>
-          <h1 className="font-display font-bold text-2xl sm:text-3xl text-zinc-900 tracking-tight mt-1">
-            Good morning, {firstName}
-          </h1>
-          <p className="text-xs sm:text-sm text-zinc-500 mt-1">
-            Here is your curated executive brief distilled from connected channels and news feeds.
-          </p>
-        </div>
+  const getProviderIcon = (provider?: string, type?: RawItemType) => {
+    const p = (provider || '').toLowerCase()
+    if (p.includes('github') || type === 'pr') return <Github className="w-3.5 h-3.5 text-zinc-700" strokeWidth={1.75} />
+    if (p.includes('gmail') || p.includes('mail') || type === 'email')
+      return <Mail className="w-3.5 h-3.5 text-rose-600" strokeWidth={1.75} />
+    if (p.includes('rss') || type === 'news')
+      return <Rss className="w-3.5 h-3.5 text-amber-600" strokeWidth={1.75} />
+    if (type === 'bill') return <Banknote className="w-3.5 h-3.5 text-emerald-600" strokeWidth={1.75} />
+    if (type === 'event') return <Calendar className="w-3.5 h-3.5 text-indigo-600" strokeWidth={1.75} />
+    return <Layers className="w-3.5 h-3.5 text-zinc-500" strokeWidth={1.75} />
+  }
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {viewMode === 'raw' ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetchRaw()}
-              isLoading={isRawFetching}
-              leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-            >
-              Refresh Raw Feed
-            </Button>
-          ) : (
-            <>
-              {hasItems && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  isLoading={generateMutation.isPending && generateMutation.variables === true}
-                  onClick={() => generateMutation.mutate(true)}
-                  leftIcon={<Mail className="w-3.5 h-3.5 text-primary" />}
-                >
-                  Resend Email Digest
-                </Button>
-              )}
-              <Button
-                variant="primary"
-                size="sm"
-                isLoading={
-                  (generateMutation.isPending && generateMutation.variables !== true) ||
-                  isDigestFetching
-                }
-                onClick={() => generateMutation.mutate(false)}
-                leftIcon={<Sparkles className="w-4 h-4 text-amber-300" />}
+  return (
+    <div className="space-y-8 pb-16">
+      {/* ========================================================= */}
+      {/* TOP HERO ROW: 2-Column Grid (Greeting + Mini Stats Bento) */}
+      {/* ========================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Col: Greeting, Date, Delivered Badge */}
+        <div className="lg:col-span-8 space-y-3">
+          <div className="flex items-center gap-3">
+            <h1 className="font-display font-bold text-[34px] sm:text-[40px] text-zinc-900 tracking-tight leading-[1.1] flex items-center">
+              <span>Good morning, {firstName}</span>
+              <Sun className="w-7 h-7 text-amber-500 ml-3 inline-block shrink-0 animate-pulse" strokeWidth={1.75} />
+            </h1>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 text-[13.5px] text-zinc-500 tabular-nums">
+            <span>{todayFormatted}</span>
+            <span>&bull;</span>
+            <span>{user?.profile?.timezone || 'Asia/Kolkata'}</span>
+            <span>&bull;</span>
+            <span>Executive Briefing Edition</span>
+          </div>
+
+          {/* Delivered Badge */}
+          {isDelivered && (
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-700 px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" strokeWidth={2} />
+              <span>
+                Delivered {digest?.delivered_at ? format(new Date(digest.delivered_at), 'h:mm a') : 'today'}
+              </span>
+              <span className="text-emerald-300">&bull;</span>
+              <Link
+                to="/archive"
+                className="text-emerald-800 hover:underline lowercase font-semibold inline-flex items-center gap-0.5"
               >
-                {hasItems ? 'Re-rank Briefing' : 'Generate Briefing'}
-              </Button>
-            </>
+                <span>archive</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </Link>
+            </div>
           )}
         </div>
+
+        {/* Right Col: AI Cost + Stats Mini Bento (2x1) */}
+        <div className="lg:col-span-4 grid grid-cols-2 gap-3">
+          <div className="rounded-[16px] bg-white border border-zinc-200/80 shadow-xs p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-zinc-400 mb-1">
+              <span className="text-[10px] uppercase font-bold tracking-wider">Synthesized</span>
+              <Zap className="w-3.5 h-3.5 text-amber-500" />
+            </div>
+            <p className="font-display font-bold text-[22px] text-zinc-900 tabular-nums leading-none">
+              {digest?.item_count || 0}
+            </p>
+            <span className="text-[10.5px] text-zinc-500 mt-1">across {sectionsList.length} sections</span>
+          </div>
+
+          <div className="rounded-[16px] bg-white border border-zinc-200/80 shadow-xs p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-zinc-400 mb-1">
+              <span className="text-[10px] uppercase font-bold tracking-wider">AI Cost</span>
+              <TrendingUp className="w-3.5 h-3.5 text-indigo-500" />
+            </div>
+            <p className="font-display font-bold text-[22px] text-zinc-900 tabular-nums leading-none">
+              {digest?.llm_cost_cents ? `${digest.llm_cost_cents}¢` : '0¢'}
+            </p>
+            <span className="text-[10.5px] text-zinc-500 mt-1">executive synthesis</span>
+          </div>
+        </div>
       </div>
 
+      {/* ========================================================= */}
+      {/* VIEW TABS: Pill Segmented Control in Dark Container       */}
+      {/* ========================================================= */}
+      <div className="flex items-center justify-between border-b border-zinc-200/70 pb-4">
+        <div className="rounded-full bg-zinc-900 p-1 inline-flex gap-1 shadow-sm">
+          <button
+            onClick={() => setViewMode('digest')}
+            className={cn(
+              'rounded-full px-5 h-9 text-[13px] font-semibold transition-all duration-200 select-none inline-flex items-center',
+              viewMode === 'digest'
+                ? 'bg-white text-zinc-900 shadow-xs'
+                : 'text-zinc-400 hover:text-white'
+            )}
+          >
+            <span>Morning Digest</span>
+            {digest?.item_count !== undefined && digest.item_count > 0 && (
+              <span
+                className={cn(
+                  'ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold tabular-nums',
+                  viewMode === 'digest' ? 'bg-zinc-900 text-white' : 'bg-white/10 text-white'
+                )}
+              >
+                {digest.item_count}
+              </span>
+            )}
+          </button>
 
-      {/* Top View Selector: Morning Digest vs. Live Raw Pipeline */}
-      <div>
-        <SegmentedTabs
-          tabs={mainViewTabs}
-          activeTab={viewMode}
-          onChange={(tab) => setViewMode(tab as 'digest' | 'raw')}
-        />
+          <button
+            onClick={() => setViewMode('raw')}
+            className={cn(
+              'rounded-full px-5 h-9 text-[13px] font-semibold transition-all duration-200 select-none inline-flex items-center',
+              viewMode === 'raw'
+                ? 'bg-white text-zinc-900 shadow-xs'
+                : 'text-zinc-400 hover:text-white'
+            )}
+          >
+            <span>Live Raw Feed Pipeline</span>
+            {rawItems.length > 0 && (
+              <span
+                className={cn(
+                  'ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold tabular-nums',
+                  viewMode === 'raw' ? 'bg-zinc-900 text-white' : 'bg-white/10 text-white'
+                )}
+              >
+                {rawItems.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <button
+          onClick={() => (viewMode === 'digest' ? refetchDigest() : refetchRaw())}
+          disabled={isDigestFetching || isRawFetching}
+          className="w-9 h-9 rounded-full bg-white border border-zinc-200/80 shadow-xs hover:bg-zinc-50 flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-all active:scale-95"
+          title="Refresh view"
+          aria-label="Refresh view"
+        >
+          <RefreshCw
+            className={cn('w-3.5 h-3.5', (isDigestFetching || isRawFetching) && 'animate-spin')}
+          />
+        </button>
       </div>
 
-      {/* VIEW MODE 1: Morning Digest */}
+      {/* ========================================================= */}
+      {/* VIEW MODE 1: MORNING DIGEST (BENTO GRID EDITORIAL)        */}
+      {/* ========================================================= */}
       {viewMode === 'digest' ? (
         <div className="space-y-8">
           {isDigestLoading || generateMutation.isPending ? (
-            <div className="space-y-6">
-              <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200/70 animate-pulse flex items-center justify-between">
-                <div className="h-4 bg-zinc-200 rounded w-1/3"></div>
-                <div className="h-4 bg-zinc-200 rounded w-20"></div>
+            /* Shimmer Skeleton Bento */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="col-span-1 md:col-span-2 rounded-[24px] border border-zinc-200/80 bg-white p-8 space-y-4 shadow-xs">
+                <div className="w-1/3 h-5 rounded-lg shimmer-skeleton" />
+                <div className="w-3/4 h-7 rounded-lg shimmer-skeleton" />
+                <div className="w-full h-12 rounded-lg shimmer-skeleton" />
               </div>
-              <div className="grid grid-cols-1 gap-4">
-                <SkeletonFeedCard />
-                <SkeletonFeedCard />
-                <SkeletonFeedCard />
+              <div className="col-span-1 rounded-[20px] border border-zinc-200/80 bg-white p-6 space-y-3 shadow-xs">
+                <div className="w-1/2 h-4 rounded-lg shimmer-skeleton" />
+                <div className="w-full h-8 rounded-lg shimmer-skeleton" />
+              </div>
+              <div className="col-span-1 rounded-[20px] border border-zinc-200/80 bg-white p-6 space-y-3 shadow-xs">
+                <div className="w-1/2 h-4 rounded-lg shimmer-skeleton" />
+                <div className="w-full h-8 rounded-lg shimmer-skeleton" />
               </div>
             </div>
           ) : !hasItems ? (
-            /* Empty State: Brief is being brewed */
-            <EmptyState
-              icon={<Coffee className="w-8 h-8 text-amber-500" />}
-              title="Your first brief is being brewed"
-              description="No briefing compiled for today yet. Ingested news and communications are queued and ready for executive synthesis."
-              action={
-                <Button
-                  variant="primary"
-                  onClick={() => generateMutation.mutate(false)}
-                  isLoading={generateMutation.isPending}
-                  leftIcon={<Sparkles className="w-4 h-4 text-amber-300" />}
-                >
-                  Generate Today's Digest
-                </Button>
-              }
-            />
+            /* Empty State */
+            <div className="rounded-[24px] border-2 border-dashed border-zinc-200 bg-white/70 p-10 sm:p-14 text-center flex flex-col items-center justify-center">
+              <div className="w-14 h-14 rounded-[20px] bg-zinc-100 flex items-center justify-center text-zinc-400 mb-4 shadow-xs">
+                <Coffee className="w-7 h-7 text-zinc-500" strokeWidth={1.75} />
+              </div>
+              <h3 className="font-display font-bold text-[20px] text-zinc-900">
+                Your briefing is ready to compile
+              </h3>
+              <p className="text-[14px] text-zinc-500 mt-1 max-w-sm mb-6 leading-relaxed">
+                Raw items from Hacker News, GitHub, and your connected feeds are normalized and waiting for executive synthesis.
+              </p>
+              <button
+                onClick={() => generateMutation.mutate(false)}
+                disabled={generateMutation.isPending}
+                className="h-10 px-6 rounded-full bg-zinc-900 text-white shadow-lg hover:bg-black hover:shadow-xl hover:-translate-y-px active:scale-[0.98] text-[14px] font-semibold transition-all inline-flex items-center gap-2"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300" strokeWidth={1.75} />
+                <span>Synthesize Today’s Briefing</span>
+              </button>
+            </div>
           ) : (
-            /* Ready Digest with Sections & Items */
-            <div className="space-y-6">
-              {/* Delivered State Banner */}
-              {isDelivered && (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs shadow-xs">
-                  <div className="flex items-center gap-2 text-emerald-900 font-medium">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>
-                      Delivered {digest.delivered_at ? format(new Date(digest.delivered_at), 'h:mm a') : 'today'}
-                    </span>
-                    <span className="text-emerald-300 hidden sm:inline">&bull;</span>
-                    <Link
-                      to="/archive"
-                      className="text-emerald-700 hover:text-emerald-900 underline font-semibold inline-flex items-center gap-1"
-                    >
-                      <span>Open in archive</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </Link>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="emerald" dot size="sm">
-                      Email Dispatched
-                    </Badge>
-                  </div>
-                </div>
-              )}
-
-              {/* Digest Metadata Strip */}
-              <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-zinc-50/90 border border-zinc-200/80 text-xs">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <Badge variant={isDelivered ? 'emerald' : 'indigo'} dot size="sm">
-                    {isDelivered ? 'Delivered' : 'Ready'} · {digest.item_count} items
-                  </Badge>
-
-                  {digest.important_count > 0 && (
-                    <Badge variant="rose" size="sm">
-                      {digest.important_count} High Priority
-                    </Badge>
-                  )}
-
-                  <span className="text-zinc-300 hidden sm:inline">•</span>
-                  <span className="text-zinc-500 font-mono text-[11px]">
-                    Generated {formatRelativeTime(digest.updated_at || digest.created_at)}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 font-mono text-[11px] text-zinc-500">
-                  <TrendingUp className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>AI Cost: {digest.llm_cost_cents}¢</span>
-                </div>
-              </div>
-
-              {/* Sections rendering */}
-              <div className="space-y-10">
-                {sectionsList.map((sectionGroup) => (
-                  <DigestSection
-                    key={sectionGroup.key}
-                    sectionKey={sectionGroup.key}
-                    title={sectionGroup.title}
-                    items={sectionGroup.items}
-                  />
-                ))}
-              </div>
+            /* Sections with Bento Cards */
+            <div className="space-y-8">
+              {sectionsList.map((sectionGroup) => (
+                <DigestSection
+                  key={sectionGroup.key}
+                  sectionKey={sectionGroup.key}
+                  title={sectionGroup.title}
+                  items={sectionGroup.items}
+                />
+              ))}
             </div>
           )}
         </div>
       ) : (
-        /* VIEW MODE 2: Real Raw Ingested Feed Pipeline */
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Rss className="w-4 h-4 text-amber-600" />
-              <h2 className="font-display font-semibold text-lg text-zinc-900">
-                Recent Ingested Raw Items
-              </h2>
-            </div>
-            <span className="text-xs text-zinc-500 font-mono">
-              Normalized &amp; Deduplicated
-            </span>
+        /* ========================================================= */
+        /* VIEW MODE 2: LIVE RAW FEED PIPELINE WITH CLASSIFIED TABS */
+        /* ========================================================= */
+        <div className="space-y-6">
+          {/* Classified Toggles (All, News, Emails, GitHub/PRs, Bills, Events) */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {pipelineTabs.map((tab) => {
+              const isSelected = pipelineCategory === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setPipelineCategory(tab.id)}
+                  className={cn(
+                    'inline-flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-semibold transition-all duration-200 select-none whitespace-nowrap active:scale-95 shadow-xs',
+                    isSelected
+                      ? 'bg-zinc-900 text-white'
+                      : 'bg-white border border-zinc-200/80 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50'
+                  )}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                  <span
+                    className={cn(
+                      'ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums',
+                      isSelected ? 'bg-zinc-800 text-white' : 'bg-zinc-100 text-zinc-600'
+                    )}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              )
+            })}
           </div>
 
+          {/* Pipeline Bento Cards */}
           {isRawLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SkeletonFeedCard />
-              <SkeletonFeedCard />
-              <SkeletonFeedCard />
-              <SkeletonFeedCard />
-            </div>
-          ) : rawItems.length === 0 ? (
-            <EmptyState
-              icon={<Rss className="w-6 h-6" />}
-              title="No Ingested Items Found"
-              description="Your feeds have not fetched items yet. Ensure your RSS feeds are active and trigger a sync from the Channels page."
-              action={
-                <Button
-                  variant="primary"
-                  onClick={() => refetchRaw()}
-                  leftIcon={<RefreshCw className="w-4 h-4" />}
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-[20px] border border-zinc-200/80 bg-white p-5 space-y-3 shadow-xs"
                 >
-                  Poll Feed Ingestor
-                </Button>
-              }
-            />
+                  <div className="w-1/2 h-4 rounded-lg shimmer-skeleton" />
+                  <div className="w-full h-12 rounded-lg shimmer-skeleton" />
+                </div>
+              ))}
+            </div>
+          ) : filteredRawItems.length === 0 ? (
+            <div className="rounded-[24px] border-2 border-dashed border-zinc-200 bg-white/70 p-10 text-center flex flex-col items-center justify-center">
+              <Rss className="w-8 h-8 text-zinc-400 mb-2" />
+              <h4 className="font-semibold text-zinc-900 text-base">No items in this category</h4>
+              <p className="text-xs text-zinc-500 mt-1 max-w-xs mb-4">
+                No raw items have been ingested for this specific classification yet.
+              </p>
+              <button
+                onClick={() => setPipelineCategory('all')}
+                className="h-8 px-4 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-semibold"
+              >
+                View All Items
+              </button>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {rawItems.map((item) => (
-                <Card
+              {filteredRawItems.map((item) => (
+                <div
                   key={item.id}
-                  hoverable
-                  className="flex flex-col justify-between transition-all hover:border-zinc-300"
+                  className="rounded-[20px] border border-zinc-200/80 bg-white p-5 sm:p-6 shadow-xs hover:shadow-md hover:-translate-y-[2px] transition-all duration-300 ease-out flex flex-col justify-between relative overflow-hidden"
                 >
-                  <div>
-                    <CardHeader className="py-3.5">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Badge variant="amber" size="sm">
-                          {item.connection_name || 'RSS Feed'}
-                        </Badge>
-                        <span className="text-zinc-300">•</span>
-                        <span className="text-xs text-zinc-400 truncate">
-                          {item.author || 'Feed Source'}
-                        </span>
-                      </div>
-                      <span className="text-[11px] text-zinc-400 font-mono shrink-0">
-                        {formatRelativeTime(item.received_at)}
-                      </span>
-                    </CardHeader>
+                  {/* Top accent line */}
+                  <div className="absolute top-0 left-0 right-0 h-[3px] bg-zinc-900 rounded-t-[20px]" />
 
-                    <CardContent className="py-2 space-y-2">
-                      <CardTitle className="text-sm font-semibold text-zinc-900 leading-snug line-clamp-2">
+                  <div>
+                    {/* Header */}
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <span className="rounded-full bg-zinc-900 text-white px-2.5 py-0.5 text-[11px] font-semibold inline-flex items-center gap-1.5 select-none shadow-xs truncate">
+                        {getProviderIcon(item.connection_provider, item.type)}
+                        <span className="truncate">{item.connection_name || 'Feed Source'}</span>
+                      </span>
+
+                      <span className="text-[11px] text-zinc-400 tabular-nums shrink-0 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-zinc-400" />
+                        <span>{formatRelativeTime(item.received_at)}</span>
+                      </span>
+                    </div>
+
+                    {/* Content */}
+                    <div className="space-y-1.5">
+                      <h3 className="text-[15px] font-semibold text-zinc-900 leading-snug line-clamp-2">
                         {item.title}
-                      </CardTitle>
+                      </h3>
                       {item.body_snippet && (
-                        <p className="text-xs text-zinc-500 line-clamp-3 leading-relaxed">
+                        <p className="text-[13px] text-zinc-600 line-clamp-3 leading-relaxed">
                           {item.body_snippet}
                         </p>
                       )}
-                    </CardContent>
+                    </div>
                   </div>
 
-                  <CardFooter className="py-2.5 px-4 bg-zinc-50/50 border-t border-zinc-100 flex items-center justify-between text-xs">
-                    <Badge variant="outline" size="sm">
-                      {item.type_display || 'News'}
-                    </Badge>
+                  {/* Footer */}
+                  <div className="pt-4 mt-4 border-t border-zinc-100 flex items-center justify-between text-xs">
+                    <span className="rounded-full bg-zinc-100 border border-zinc-200/80 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600">
+                      {item.type_display || item.type}
+                    </span>
 
                     {item.source_url ? (
                       <a
                         href={item.source_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 font-medium text-primary hover:text-primary-hover transition-colors"
+                        className="inline-flex items-center gap-1.5 font-semibold text-zinc-900 hover:text-black transition-colors"
                       >
-                        <span>Read Article</span>
+                        <span>Open Source</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     ) : (
                       <span className="text-zinc-400">No URL</span>
                     )}
-                  </CardFooter>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           )}

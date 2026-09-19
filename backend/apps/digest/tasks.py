@@ -7,18 +7,35 @@ from django.utils import timezone
 from apps.ingestor.models import RawItem
 from apps.llm.services import summarize_items
 from apps.llm.models import TokenUsage
+from apps.feedback.models import CategoryWeight
 from .models import Digest, DigestItem
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+
+RECRUITER_KEYWORDS = [
+    'recruiter', 'recruiting', 'interview', 'job offer', 'application',
+    'talent acquisition', 'hiring manager', 'careers', 'phone screen',
+    'technical interview', 'onsite interview'
+]
+
+
+def is_recruiter_item(raw_item: RawItem, summary_dict: dict) -> bool:
+    """Checks if raw item or summary indicates a job recruitment opportunity."""
+    text_to_check = f"{summary_dict.get('source_title', '')} {summary_dict.get('summary', '')}"
+    if raw_item:
+        text_to_check += f" {raw_item.title} {raw_item.body_snippet} {raw_item.author}"
+    text_lower = text_to_check.lower()
+    return any(kw in text_lower for kw in RECRUITER_KEYWORDS)
 
 
 @shared_task(name='apps.digest.tasks.build_digest')
 def build_digest(user_id: int, digest_date_str: str = None):
     """
     Builds a Daily Digest for a specific user.
-    Gathers unread RawItems, batches them to the LLM service layer for summarization,
-    and creates ranked DigestItem records grouped by section.
+    Gathers unread RawItems, applies spam filtering, calls the LLM service for summarization,
+    adjusts scores based on CategoryWeights and job_hunt_mode, enforces priority caps,
+    and creates ranked DigestItem records.
     """
     try:
         user = User.objects.select_related('profile').get(pk=user_id)
@@ -41,7 +58,7 @@ def build_digest(user_id: int, digest_date_str: str = None):
 
     logger.info(f"[DigestBuilder] Compiling digest for '{user.email}' on {digest_date}")
 
-    # 1. Gather RawItems from the last 24h
+    # 1. Gather RawItems from the last 24h, strictly excluding spam
     cutoff = timezone.now() - timedelta(hours=24)
     raw_items = list(
         RawItem.objects.filter(
@@ -60,7 +77,31 @@ def build_digest(user_id: int, digest_date_str: str = None):
             ).select_related('connection').order_by('-received_at')[:20]
         )
 
-    # Initialize or reset Digest container
+    # If still no raw items, automatically sync any active/pending RSS connections
+    if not raw_items:
+        from apps.connections.models import Connection
+        from apps.ingestor.tasks import fetch_rss_feeds
+
+        rss_conns = Connection.objects.filter(
+            user=user,
+            provider=Connection.Provider.RSS,
+            is_active=True
+        )
+        for conn in rss_conns:
+            try:
+                fetch_rss_feeds(conn.id)
+            except Exception as e:
+                logger.warning(f"[DigestBuilder] Auto-sync failed for {conn.display_name}: {e}")
+
+        # Re-query raw items after auto-sync
+        raw_items = list(
+            RawItem.objects.filter(
+                user=user,
+                is_spam=False
+            ).select_related('connection').order_by('-received_at')[:50]
+        )
+
+    # Initialize or reset Digest container (idempotent per day)
     digest, _ = Digest.objects.get_or_create(
         user=user,
         digest_date=digest_date,
@@ -71,6 +112,7 @@ def build_digest(user_id: int, digest_date_str: str = None):
 
     if not raw_items:
         logger.info(f"[DigestBuilder] No raw items found for {user.email}.")
+        digest.items.all().delete()
         digest.status = Digest.Status.READY
         digest.item_count = 0
         digest.important_count = 0
@@ -86,36 +128,25 @@ def build_digest(user_id: int, digest_date_str: str = None):
     raw_item_map = {item.id: item for item in raw_items}
     summaries = summarize_items(raw_items, user=user)
 
-    # Clean out any previously generated items for this date
+    # Clean out any previously generated items for this date to maintain idempotency
     digest.items.all().delete()
 
-    # 3. Create DigestItems
-    digest_items_to_create = []
-    priority_weights = {
-        DigestItem.Priority.URGENT: 1,
-        DigestItem.Priority.HIGH: 2,
-        DigestItem.Priority.NORMAL: 3,
+    # 3. Load user weights & profile preferences
+    user_weights = {
+        cw.category_key: cw.weight
+        for cw in CategoryWeight.objects.filter(user=user)
     }
+    job_hunt_mode = getattr(user.profile, 'job_hunt_mode', False) if hasattr(user, 'profile') else False
 
-    # Sort summarized results: priority first, then received_at desc
-    def sort_key(s_dict):
-        raw = raw_item_map.get(s_dict.get('id'))
-        p = s_dict.get('priority', 'normal')
-        weight = priority_weights.get(p, 3)
-        received_ts = raw.received_at.timestamp() if raw else 0
-        return (weight, -received_ts)
-
-    sorted_summaries = sorted(summaries, key=sort_key)
-
-    important_count = 0
     valid_sections = {choice[0] for choice in DigestItem.Section.choices}
     valid_priorities = {choice[0] for choice in DigestItem.Priority.choices}
 
-    for rank_idx, s in enumerate(sorted_summaries, start=1):
+    # Score and rank candidates
+    scored_candidates = []
+    for rank_idx, s in enumerate(summaries, start=1):
         raw_id = s.get('id')
         raw = raw_item_map.get(raw_id)
         if not raw and raw_items:
-            # Fallback to index-matched raw item if ID is out of range
             raw = raw_items[(rank_idx - 1) % len(raw_items)]
 
         sec = s.get('section', 'news').lower()
@@ -126,23 +157,94 @@ def build_digest(user_id: int, digest_date_str: str = None):
         if pri not in valid_priorities:
             pri = DigestItem.Priority.NORMAL
 
-        if pri in [DigestItem.Priority.HIGH, DigestItem.Priority.URGENT]:
-            important_count += 1
+        base_score = 30.0
+        if pri == DigestItem.Priority.URGENT:
+            base_score = 100.0
+        elif pri == DigestItem.Priority.HIGH:
+            base_score = 70.0
+
+        # Job hunt mode promotion: recruiter items get boosted to urgent/high
+        is_recruiter = is_recruiter_item(raw, s)
+        if job_hunt_mode and is_recruiter:
+            base_score += 50.0
+            pri = DigestItem.Priority.URGENT
+            sec = DigestItem.Section.EMAILS if (raw and raw.type == RawItem.ItemType.EMAIL) else DigestItem.Section.ACTIONS
+
+        # Category and source weight adjustments
+        cats = [sec]
+        if raw:
+            cats.append(raw.type)
+            if raw.connection:
+                if raw.connection.provider:
+                    cats.append(raw.connection.provider)
+                if raw.connection.display_name:
+                    cats.append(raw.connection.display_name)
+            if raw.author:
+                cats.append(raw.author)
+
+        weight_sum = sum(user_weights.get(c, 0.0) for c in cats)
+        capped_weight = max(-3.0, min(3.0, weight_sum))
+        final_score = base_score + (capped_weight * 15.0)
+        is_adjusted = abs(capped_weight) >= 0.2
 
         title = s.get('source_title') or (raw.title if raw else 'Brief Item')
         summary_text = s.get('summary', '') or (raw.body_snippet if raw else '')
         ai_reason = s.get('ai_reason', '')
 
+        scored_candidates.append({
+            'raw': raw,
+            'section': sec,
+            'priority': pri,
+            'source_title': title[:512],
+            'summary': summary_text,
+            'ai_reason': ai_reason,
+            'final_score': final_score,
+            'is_adjusted_by_weight': is_adjusted,
+            'received_at': raw.received_at.timestamp() if raw and raw.received_at else 0,
+        })
+
+    # Sort candidates by final score (descending), then received_at (descending)
+    scored_candidates.sort(key=lambda x: (x['final_score'], x['received_at']), reverse=True)
+
+    # Respect rank cap: limit to top 10 items max
+    top_candidates = scored_candidates[:10]
+
+    # Enforce priority caps: max 1 urgent, max 3 high
+    urgent_count = 0
+    high_count = 0
+    important_count = 0
+    digest_items_to_create = []
+
+    for idx, sc in enumerate(top_candidates, start=1):
+        pri = sc['priority']
+        if pri == DigestItem.Priority.URGENT:
+            if urgent_count < 1:
+                urgent_count += 1
+            elif high_count < 3:
+                pri = DigestItem.Priority.HIGH
+                high_count += 1
+            else:
+                pri = DigestItem.Priority.NORMAL
+        elif pri == DigestItem.Priority.HIGH:
+            if high_count < 3:
+                high_count += 1
+            else:
+                pri = DigestItem.Priority.NORMAL
+
+        if pri in (DigestItem.Priority.HIGH, DigestItem.Priority.URGENT):
+            important_count += 1
+
         digest_items_to_create.append(
             DigestItem(
                 digest=digest,
-                raw_item=raw,
-                section=sec,
-                rank=rank_idx,
-                summary=summary_text,
+                raw_item=sc['raw'],
+                section=sc['section'],
+                rank=idx,
+                summary=sc['summary'],
                 priority=pri,
-                ai_reason=ai_reason,
-                source_title=title[:512],
+                ai_reason=sc['ai_reason'],
+                source_title=sc['source_title'],
+                is_adjusted_by_weight=sc['is_adjusted_by_weight'],
             )
         )
 

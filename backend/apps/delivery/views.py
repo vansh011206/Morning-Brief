@@ -65,10 +65,14 @@ class SendTestBriefView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        success, msg = DeliveryService.send_digest_email(digest)
-        if not success:
+        # Dispatch via unified DeliveryService (email, telegram, or both)
+        results = DeliveryService.send(digest)
+
+        any_success = any(r.get('success') for r in results.values()) if results else False
+        if not any_success:
+            err_details = "; ".join([f"{ch}: {r.get('result')}" for ch, r in results.items()])
             return Response(
-                {"error": f"Email dispatch failed: {msg}"},
+                {"error": f"Brief dispatch failed: {err_details or 'No delivery channel configured.'}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -76,10 +80,13 @@ class SendTestBriefView(APIView):
         digest.delivered_at = timezone.now()
         digest.save(update_fields=['status', 'delivered_at', 'updated_at'])
 
+        channels_sent = [ch for ch, r in results.items() if r.get('success')]
         return Response({
             "status": "sent",
+            "channels": channels_sent,
             "recipient": user.email,
-            "message": f"Test brief sent to {user.email}",
+            "message": f"Test brief sent via {', '.join(channels_sent)} to {user.email}",
             "delivered_at": digest.delivered_at.isoformat(),
+            "results": results,
         }, status=status.HTTP_200_OK)
 

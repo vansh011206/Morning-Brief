@@ -2,7 +2,7 @@ import React from 'react'
 import { cn } from '../../utils/cn'
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'indigo' | 'amber' | 'emerald' | 'rose' | 'zinc' | 'outline'
+  variant?: 'indigo' | 'amber' | 'emerald' | 'rose' | 'zinc' | 'outline' | 'urgent' | 'high' | 'normal'
   size?: 'sm' | 'md'
   dot?: boolean
   icon?: React.ReactNode
@@ -18,17 +18,23 @@ export const Badge: React.FC<BadgeProps> = ({
   ...props
 }) => {
   const variantStyles = {
-    indigo: 'bg-primary-light text-primary-700 border-primary-200',
-    amber: 'bg-amber-sunrise-light text-amber-700 border-amber-200',
-    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    rose: 'bg-rose-50 text-rose-700 border-rose-200',
+    urgent: 'bg-rose-600 text-white border-transparent shadow-xs',
+    high: 'bg-amber-50 text-amber-700 border-transparent ring-1 ring-amber-200',
+    normal: 'bg-zinc-100 text-zinc-600 border-transparent',
+    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
+    amber: 'bg-amber-50 text-amber-700 border-amber-200/80',
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+    rose: 'bg-rose-50 text-rose-700 border-rose-200/80',
     zinc: 'bg-zinc-100 text-zinc-700 border-zinc-200',
     outline: 'bg-transparent text-zinc-700 border-zinc-300',
   }
 
   const dotColorStyles = {
-    indigo: 'bg-primary',
-    amber: 'bg-amber-sunrise',
+    urgent: 'bg-white',
+    high: 'bg-amber-500',
+    normal: 'bg-zinc-400',
+    indigo: 'bg-indigo-600',
+    amber: 'bg-amber-500',
     emerald: 'bg-emerald-500',
     rose: 'bg-rose-500',
     zinc: 'bg-zinc-400',
@@ -36,8 +42,8 @@ export const Badge: React.FC<BadgeProps> = ({
   }
 
   const sizeStyles = {
-    sm: 'text-[11px] px-2 py-0.5 gap-1 font-medium',
-    md: 'text-xs px-2.5 py-1 gap-1.5 font-medium',
+    sm: 'text-[11px] px-2.5 py-0.5 gap-1.5 font-semibold tracking-wide uppercase',
+    md: 'text-xs px-3 py-1 gap-2 font-semibold tracking-wide uppercase',
   }
 
   return (

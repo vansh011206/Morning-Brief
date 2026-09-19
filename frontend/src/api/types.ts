@@ -173,3 +173,7 @@ export interface HealthResponse {
   version: string
 }
 
+export interface ItemFeedbackPayload {
+  digest_item: number
+  feedback_type: 'helpful' | 'unhelpful' | 'irrelevant' | 'missed_urgent'
+}

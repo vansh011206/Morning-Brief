@@ -1,13 +1,11 @@
 import React from 'react'
 import {
   Newspaper,
-  CheckSquare,
+  Zap,
   Mail,
-  TrendingUp,
-  Calendar,
+  Banknote,
   Layers,
 } from 'lucide-react'
-import { Badge } from '../../components/ui/Badge'
 import { DigestItemCard } from './DigestItemCard'
 import type { DigestItem, DigestSectionKey } from '../../api/types'
 
@@ -27,42 +25,50 @@ export const DigestSection: React.FC<DigestSectionProps> = ({
   const getSectionIcon = (key: string) => {
     switch (key) {
       case 'news':
-        return <Newspaper className="w-4 h-4 text-indigo-600" />
+        return <Newspaper className="w-3.5 h-3.5 text-white" strokeWidth={1.75} />
       case 'actions':
-        return <CheckSquare className="w-4 h-4 text-amber-600" />
+        return <Zap className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.75} />
       case 'emails':
-        return <Mail className="w-4 h-4 text-sky-600" />
+        return <Mail className="w-3.5 h-3.5 text-rose-300" strokeWidth={1.75} />
       case 'money':
-        return <TrendingUp className="w-4 h-4 text-emerald-600" />
-      case 'events':
-        return <Calendar className="w-4 h-4 text-purple-600" />
+        return <Banknote className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.75} />
       default:
-        return <Layers className="w-4 h-4 text-zinc-600" />
+        return <Layers className="w-3.5 h-3.5 text-zinc-300" strokeWidth={1.75} />
     }
   }
 
   return (
-    <section className="space-y-3.5">
-      {/* Section Header */}
-      <div className="flex items-center justify-between border-b border-zinc-200/80 pb-2.5">
-        <div className="flex items-center gap-2">
-          <div className="p-1 rounded-md bg-zinc-100/80">
+    <section className="space-y-4">
+      {/* Editorial Section Header */}
+      <div className="flex items-center justify-between pt-4 pb-1">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {/* Icon 28px rounded-xl bg-zinc-900 text-white */}
+          <div className="w-7 h-7 rounded-xl bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-xs">
             {getSectionIcon(sectionKey)}
           </div>
-          <h2 className="font-display font-semibold text-base sm:text-lg text-zinc-900 tracking-tight">
+
+          <h2 className="font-display font-bold text-[13px] uppercase tracking-widest text-zinc-900 truncate">
             {title}
           </h2>
+
+          {/* Editorial divider line */}
+          <div className="flex-1 h-px bg-zinc-200/80 ml-2 hidden sm:block" />
         </div>
 
-        <Badge variant="zinc" size="sm">
+        {/* Count badge */}
+        <span className="rounded-full bg-zinc-100 border border-zinc-200/80 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-600 tabular-nums shrink-0 ml-3">
           {items.length} {items.length === 1 ? 'item' : 'items'}
-        </Badge>
+        </span>
       </div>
 
-      {/* Grid of Items */}
-      <div className="grid grid-cols-1 gap-3.5">
-        {items.map((item) => (
-          <DigestItemCard key={item.id} item={item} />
+      {/* Bento Grid: 2 columns on desktop, 1 on mobile, gap-4. First item featured (2 cols) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {items.map((item, index) => (
+          <DigestItemCard
+            key={item.id}
+            item={item}
+            isFeatured={index === 0 && items.length > 1}
+          />
         ))}
       </div>
     </section>

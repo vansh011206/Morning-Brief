@@ -6,6 +6,7 @@ from .views import (
     LogoutView,
     CurrentUserView,
     UserPreferencesView,
+    DeleteAccountView,
 )
 
 app_name = 'accounts'
@@ -17,4 +18,9 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     path('me/', CurrentUserView.as_view(), name='current_user'),
     path('me/preferences/', UserPreferencesView.as_view(), name='user_preferences'),
+    path('delete-account/', DeleteAccountView.as_view(), name='delete_account'),
 ]
+
+
+
+

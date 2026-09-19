@@ -20,6 +20,11 @@ class LoginRateThrottle(AnonRateThrottle):
     rate = '5/min'
 
 
+class RegisterRateThrottle(AnonRateThrottle):
+    scope = 'register'
+    rate = '5/min'
+
+
 class LoginView(TokenObtainPairView):
     """
     Authenticate with email/password and obtain JWT access & refresh tokens.
@@ -31,10 +36,12 @@ class LoginView(TokenObtainPairView):
 class RegisterView(generics.CreateAPIView):
     """
     Register a new user account with name, email, and password. Returns user object and JWT tokens.
+    Rate limited to 5 registrations per minute per IP address.
     """
     queryset = User.objects.all()
     permission_classes = (permissions.AllowAny,)
     serializer_class = RegisterSerializer
+    throttle_classes = [RegisterRateThrottle]
 
     @extend_schema(
         summary="Register new user",
@@ -130,3 +137,46 @@ class UserPreferencesView(APIView):
 
         # Return refreshed UserSerializer with embedded profile
         return Response(UserSerializer(request.user).data)
+
+
+class DeleteAccountView(APIView):
+    """
+    POST/DELETE /api/v1/auth/delete-account/
+    GDPR-compliant transactional data wipe:
+    Permanently deletes all RawItems, Connections, Digests, DigestItems,
+    ItemFeedbacks, CategoryWeights, TokenUsages, and the User account.
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    @extend_schema(
+        summary="GDPR Account & Data Wipe",
+        description="Permanently deletes all user accounts, connections, raw items, digests, feedback, and token usage.",
+        responses={200: OpenApiResponse(description="All personal data wiped")}
+    )
+    def delete(self, request):
+        from django.db import transaction
+        from apps.ingestor.models import RawItem
+        from apps.connections.models import Connection
+        from apps.digest.models import Digest
+        from apps.feedback.models import ItemFeedback, CategoryWeight
+        from apps.llm.models import TokenUsage
+        from apps.delivery.models import DeliveryLog
+
+        user = request.user
+        with transaction.atomic():
+            RawItem.objects.filter(user=user).delete()
+            Connection.objects.filter(user=user).delete()
+            Digest.objects.filter(user=user).delete()
+            ItemFeedback.objects.filter(user=user).delete()
+            CategoryWeight.objects.filter(user=user).delete()
+            TokenUsage.objects.filter(user=user).delete()
+            DeliveryLog.objects.filter(digest__user=user).delete()
+            user.delete()
+
+        return Response(
+            {"status": "deleted", "message": "All personal data, ingested items, and account records have been permanently wiped."},
+            status=status.HTTP_200_OK
+        )
+
+    def post(self, request):
+        return self.delete(request)

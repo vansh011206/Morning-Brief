@@ -40,6 +40,12 @@ class RawItem(models.Model):
     received_at = models.DateTimeField(db_index=True)
     is_important = models.BooleanField(null=True, blank=True)
     is_spam = models.BooleanField(default=False)
+    section_hint = models.CharField(
+        max_length=32,
+        blank=True,
+        default='',
+        help_text="Optional section routing hint (e.g. 'money' or 'actions')",
+    )
     feedback_score = models.FloatField(default=0.0)
     dedup_hash = models.CharField(
         max_length=64,

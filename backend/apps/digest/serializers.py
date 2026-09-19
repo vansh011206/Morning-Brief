@@ -95,3 +95,4 @@ class DigestSerializer(serializers.ModelSerializer):
                     'items': serialized,
                 }
         return grouped
+

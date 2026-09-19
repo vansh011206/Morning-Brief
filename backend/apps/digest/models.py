@@ -28,6 +28,16 @@ class Digest(models.Model):
     important_count = models.PositiveIntegerField(default=0)
     llm_cost_cents = models.FloatField(default=0.0)
     delivered_at = models.DateTimeField(null=True, blank=True)
+    meta = models.JSONField(
+        blank=True,
+        default=dict,
+        help_text="Audit metadata including skipped spam items and ranking decisions",
+    )
+    delivery_channels = models.JSONField(
+        blank=True,
+        default=list,
+        help_text="Channels to which this digest has been or will be delivered",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -85,6 +95,10 @@ class DigestItem(models.Model):
     )
     ai_reason = models.TextField(blank=True, default='')
     source_title = models.CharField(max_length=512, blank=True, default='')
+    is_adjusted_by_weight = models.BooleanField(
+        default=False,
+        help_text="Indicates whether this item's ranking was shifted by user category weights"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -92,3 +106,4 @@ class DigestItem(models.Model):
 
     def __str__(self):
         return f"#{self.rank} [{self.section}|{self.priority}] {self.source_title[:45]}"
+

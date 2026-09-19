@@ -21,6 +21,15 @@ export interface SyncResponse {
   existing_count?: number
 }
 
+export interface TelegramTokenResponse {
+  token: string
+  bot_username: string
+  deep_link: string
+  is_bound: boolean
+  chat_id?: string | null
+  connection?: Connection | null
+}
+
 export const connectionsApi = {
   getConnections: async (): Promise<Connection[]> => {
     const res = await apiClient.get<Connection[]>('/connections/')
@@ -50,4 +59,35 @@ export const connectionsApi = {
     const res = await apiClient.post<SyncResponse>(`/connections/${id}/sync/`)
     return res.data
   },
+
+  getTelegramToken: async (): Promise<TelegramTokenResponse> => {
+    const res = await apiClient.get<TelegramTokenResponse>('/connections/telegram/token/')
+    return res.data
+  },
+
+  bindTelegram: async (payload: { token?: string; chat_id?: string }): Promise<{
+    status: string
+    message: string
+    chat_id: string
+    connection?: Connection
+  }> => {
+    const res = await apiClient.post<{
+      status: string
+      message: string
+      chat_id: string
+      connection?: Connection
+    }>('/connections/telegram/bind/', payload)
+    return res.data
+  },
+
+  getGmailAuthUrl: async (): Promise<{ url: string; auth_url: string }> => {
+    const res = await apiClient.get<{ url: string; auth_url: string }>('/connections/gmail/auth-url/')
+    return res.data
+  },
+
+  getGithubAuthUrl: async (): Promise<{ url: string; auth_url: string }> => {
+    const res = await apiClient.get<{ url: string; auth_url: string }>('/connections/github/auth-url/')
+    return res.data
+  },
 }
+

@@ -204,7 +204,7 @@ export const SettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="w-full space-y-8 pb-16">
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
@@ -220,9 +220,51 @@ export const SettingsPage: React.FC = () => {
         </p>
       </div>
 
-      <div className="space-y-6">
-        {/* Profile Card */}
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+        {/* Left Subnav (Profile, Schedule, Delivery, Priority, Danger) */}
+        <div className="md:col-span-3 sticky top-24 space-y-1 hidden md:block">
+          <a
+            href="#profile"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-900 bg-zinc-100 hover:bg-zinc-200/70 transition-colors"
+          >
+            <Shield className="w-4 h-4 text-zinc-500" />
+            <span>Profile Details</span>
+          </a>
+          <a
+            href="#schedule"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+          >
+            <Clock className="w-4 h-4 text-zinc-500" />
+            <span>Schedule & Timing</span>
+          </a>
+          <a
+            href="#delivery"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+          >
+            <Mail className="w-4 h-4 text-zinc-500" />
+            <span>Delivery Channels</span>
+          </a>
+          <a
+            href="#priority"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+          >
+            <Briefcase className="w-4 h-4 text-zinc-500" />
+            <span>AI Prioritization</span>
+          </a>
+          <a
+            href="#danger"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+          >
+            <AlertTriangle className="w-4 h-4 text-rose-500" />
+            <span>Danger Zone</span>
+          </a>
+        </div>
+
+        {/* Right Content Cards */}
+        <div className="md:col-span-9 space-y-6">
+          {/* Profile Card */}
+          <div id="profile">
+            <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-700">
@@ -252,270 +294,276 @@ export const SettingsPage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        {/* Schedule & Timing Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-sunrise-light border border-amber-200 flex items-center justify-center text-amber-sunrise">
-                <Clock className="w-5 h-5" />
-              </div>
-              <div>
-                <CardTitle>Delivery Schedule</CardTitle>
-                <CardDescription>
-                  Determine your wake-up time and local timezone for compilation.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-5">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-600 mb-2">
-                Digest Dispatch Time
-              </label>
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                {quickChips.map((chip) => (
-                  <button
-                    key={chip.value}
-                    type="button"
-                    onClick={() => setDigestTime(chip.value)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                      digestTime === chip.value
-                        ? 'bg-amber-sunrise-light border-amber-sunrise text-amber-800 shadow-sm'
-                        : 'bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300'
-                    }`}
-                  >
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-
-              <Input
-                type="time"
-                value={digestTime}
-                onChange={(e) => setDigestTime(e.target.value)}
-                helperText="24-hour delivery schedule"
-              />
-            </div>
-
-            {/* Searchable Timezone */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-600">
-                  Local Timezone
-                </label>
-                <span className="text-xs font-mono text-primary font-semibold">
-                  Active: {timezone}
-                </span>
-              </div>
-
-              <Input
-                placeholder="Search timezones (e.g. Kolkata, London, New York)..."
-                value={tzSearch}
-                onChange={(e) => setTzSearch(e.target.value)}
-                leftIcon={<Search className="w-4 h-4" />}
-              />
-
-              <div className="max-h-40 overflow-y-auto border border-zinc-200 rounded-lg divide-y divide-zinc-100 bg-white">
-                {filteredTimezones.map((tz) => (
-                  <div
-                    key={tz.value}
-                    onClick={() => setTimezone(tz.value)}
-                    className={`px-3.5 py-2 text-xs flex items-center justify-between cursor-pointer transition-colors ${
-                      timezone === tz.value
-                        ? 'bg-primary-50 text-primary-700 font-semibold'
-                        : 'hover:bg-zinc-50 text-zinc-700'
-                    }`}
-                  >
-                    <span>{tz.label}</span>
-                    {timezone === tz.value && (
-                      <Check className="w-3.5 h-3.5 text-primary shrink-0" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Channel Toggles Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary-light border border-primary-200 flex items-center justify-center text-primary">
-                <Send className="w-5 h-5" />
-              </div>
-              <div>
-                <CardTitle>Delivery Endpoints</CardTitle>
-                <CardDescription>
-                  Configure active channels for dispatching digests.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div
-                onClick={() => setDeliveryChannel('email')}
-                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                  deliveryChannel === 'email' || deliveryChannel === 'both'
-                    ? 'border-primary bg-primary-50/20'
-                    : 'border-zinc-200 hover:border-zinc-300'
-                }`}
-              >
+          {/* Schedule & Timing Card */}
+          <div id="schedule">
+            <Card>
+              <CardHeader>
                 <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-primary" />
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+                    <Clock className="w-5 h-5" />
+                  </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-zinc-900">Email Delivery</h4>
-                    <p className="text-xs text-zinc-500">Sent to {user?.email}</p>
+                    <CardTitle>Delivery Schedule</CardTitle>
+                    <CardDescription>
+                      Determine your wake-up time and local timezone for compilation.
+                    </CardDescription>
                   </div>
                 </div>
-              </div>
+              </CardHeader>
 
-              <div
-                onClick={() => setDeliveryChannel(deliveryChannel === 'email' ? 'both' : 'email')}
-                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                  deliveryChannel === 'telegram' || deliveryChannel === 'both'
-                    ? 'border-primary bg-primary-50/20'
-                    : 'border-zinc-200 hover:border-zinc-300'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Send className="w-5 h-5 text-sky-600" />
-                    <div>
-                      <h4 className="text-sm font-semibold text-zinc-900">Telegram Bot</h4>
-                      <p className="text-xs text-zinc-500">Bot messaging</p>
+              <CardContent className="space-y-5">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-600 mb-2">
+                    Digest Dispatch Time
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    {quickChips.map((chip) => (
+                      <button
+                        key={chip.value}
+                        type="button"
+                        onClick={() => setDigestTime(chip.value)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${digestTime === chip.value
+                            ? 'bg-amber-50 border-amber-300 text-amber-800 shadow-xs'
+                            : 'bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300'
+                          }`}
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <Input
+                    type="time"
+                    value={digestTime}
+                    onChange={(e) => setDigestTime(e.target.value)}
+                    helperText="24-hour delivery schedule"
+                  />
+                </div>
+
+                {/* Searchable Timezone */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                      Local Timezone
+                    </label>
+                    <span className="text-xs font-mono text-primary font-semibold">
+                      Active: {timezone}
+                    </span>
+                  </div>
+
+                  <Input
+                    placeholder="Search timezones (e.g. Kolkata, London, New York)..."
+                    value={tzSearch}
+                    onChange={(e) => setTzSearch(e.target.value)}
+                    leftIcon={<Search className="w-4 h-4" />}
+                  />
+
+                  <div className="max-h-40 overflow-y-auto border border-zinc-200 rounded-xl divide-y divide-zinc-100 bg-white">
+                    {filteredTimezones.map((tz) => (
+                      <div
+                        key={tz.value}
+                        onClick={() => setTimezone(tz.value)}
+                        className={`px-3.5 py-2 text-xs flex items-center justify-between cursor-pointer transition-colors ${timezone === tz.value
+                            ? 'bg-indigo-50 text-indigo-700 font-semibold'
+                            : 'hover:bg-zinc-50 text-zinc-700'
+                          }`}
+                      >
+                        <span>{tz.label}</span>
+                        {timezone === tz.value && (
+                          <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Channel Toggles Card */}
+          <div id="delivery">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                    <Send className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <CardTitle>Delivery Endpoints</CardTitle>
+                    <CardDescription>
+                      Configure active channels for dispatching digests.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div
+                    onClick={() => setDeliveryChannel('email')}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${deliveryChannel === 'email' || deliveryChannel === 'both'
+                        ? 'border-indigo-600 bg-indigo-50/40 shadow-xs'
+                        : 'border-zinc-200 hover:border-zinc-300'
+                      }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-5 h-5 text-indigo-600" />
+                      <div>
+                        <h4 className="text-sm font-semibold text-zinc-900">Email Delivery</h4>
+                        <p className="text-xs text-zinc-500">Sent to {user?.email}</p>
+                      </div>
                     </div>
                   </div>
-                  <Badge variant="amber" size="sm">Phase 7</Badge>
+
+                  <div
+                    onClick={() => setDeliveryChannel(deliveryChannel === 'email' ? 'both' : 'email')}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${deliveryChannel === 'telegram' || deliveryChannel === 'both'
+                        ? 'border-indigo-600 bg-indigo-50/40 shadow-xs'
+                        : 'border-zinc-200 hover:border-zinc-300'
+                      }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Send className="w-5 h-5 text-sky-600" />
+                        <div>
+                          <h4 className="text-sm font-semibold text-zinc-900">Telegram Bot</h4>
+                          <p className="text-xs text-zinc-500">Bot messaging</p>
+                        </div>
+                      </div>
+                      <Badge variant="amber" size="sm">Phase 7</Badge>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {(deliveryChannel === 'telegram' || deliveryChannel === 'both') && (
-              <Input
-                label="Telegram Chat ID"
-                placeholder="e.g. 123456789"
-                value={telegramChatId}
-                onChange={(e) => setTelegramChatId(e.target.value)}
-                helperText="Send /start to @MorningBriefBot to link your ID"
-              />
-            )}
+                {(deliveryChannel === 'telegram' || deliveryChannel === 'both') && (
+                  <Input
+                    label="Telegram Chat ID"
+                    placeholder="e.g. 123456789"
+                    value={telegramChatId}
+                    onChange={(e) => setTelegramChatId(e.target.value)}
+                    helperText="Send /start to @MorningBriefBot to link your ID"
+                  />
+                )}
 
-            {/* Test Email Preview Action */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl bg-indigo-50/50 border border-indigo-100">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-indigo-100/80 border border-indigo-200 flex items-center justify-center text-primary shrink-0">
-                  <Mail className="w-4 h-4" />
+                {/* Test Email Preview Action */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl bg-indigo-50/50 border border-indigo-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-100/80 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-semibold text-zinc-900">Email Digest Preview</h5>
+                      <p className="text-[11px] text-zinc-500">
+                        Dispatch today's synthesized briefing to <span className="font-mono text-zinc-700">{user?.email}</span> immediately.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    isLoading={isSendingTestBrief}
+                    onClick={handleSendTestBrief}
+                    leftIcon={<Send className="w-3.5 h-3.5 text-primary" />}
+                  >
+                    Send me a test brief
+                  </Button>
                 </div>
-                <div>
-                  <h5 className="text-xs font-semibold text-zinc-900">Email Digest Preview</h5>
-                  <p className="text-[11px] text-zinc-500">
-                    Dispatch today's synthesized briefing to <span className="font-mono text-zinc-700">{user?.email}</span> immediately.
-                  </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* AI Prioritization */}
+          <div id="priority">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+                    <Briefcase className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <CardTitle>AI Ranking Intelligence</CardTitle>
+                    <CardDescription>Fine-tune how the ranking model orders morning feeds.</CardDescription>
+                  </div>
                 </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                isLoading={isSendingTestBrief}
-                onClick={handleSendTestBrief}
-                leftIcon={<Send className="w-3.5 h-3.5 text-primary" />}
-              >
-                Send me a test brief
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+              </CardHeader>
 
-        {/* AI Prioritization */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
-                <Briefcase className="w-5 h-5" />
-              </div>
-              <div>
-                <CardTitle>AI Ranking Intelligence</CardTitle>
-                <CardDescription>Fine-tune how the ranking model orders morning feeds.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
+              <CardContent className="space-y-4">
+                <Switch
+                  label="Job Hunt Mode"
+                  description="Automatically elevate recruiter inquiries, interview schedules, and application replies to Rank #1 Critical priority."
+                  checked={jobHuntMode}
+                  onChange={setJobHuntMode}
+                />
 
-          <CardContent className="space-y-4">
-            <Switch
-              label="Job Hunt Mode"
-              description="Automatically elevate recruiter inquiries, interview schedules, and application replies to Rank #1 Critical priority."
-              checked={jobHuntMode}
-              onChange={setJobHuntMode}
-            />
+                <div className="pt-3 border-t border-zinc-100">
+                  <Switch
+                    label="Enable Daily Briefings"
+                    description="Automatically generate and dispatch your briefing at your designated time."
+                    checked={digestEnabled}
+                    onChange={setDigestEnabled}
+                  />
+                </div>
+              </CardContent>
 
-            <div className="pt-3 border-t border-zinc-100">
-              <Switch
-                label="Enable Daily Briefings"
-                description="Automatically generate and dispatch your briefing at your designated time."
-                checked={digestEnabled}
-                onChange={setDigestEnabled}
-              />
-            </div>
-          </CardContent>
+              <CardFooter>
+                <span className="text-xs text-zinc-500">
+                  Changes update immediately in your profile
+                </span>
+                <Button
+                  variant="primary"
+                  isLoading={isSaving}
+                  onClick={handleSavePreferences}
+                  leftIcon={<Save className="w-4 h-4" />}
+                >
+                  Save Preferences
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
 
-          <CardFooter>
-            <span className="text-xs text-zinc-500">
-              Changes update immediately in your profile
-            </span>
-            <Button
-              variant="primary"
-              isLoading={isSaving}
-              onClick={handleSavePreferences}
-              leftIcon={<Save className="w-4 h-4" />}
-            >
-              Save Preferences
-            </Button>
-          </CardFooter>
-        </Card>
+          {/* Danger Zone Card */}
+          <div id="danger">
+            <Card className="border-rose-200 bg-rose-50/20">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-rose-900">Danger Zone</CardTitle>
+                    <CardDescription className="text-rose-700">
+                      Irreversible account actions and data purging
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
 
-        {/* Danger Zone Card */}
-        <Card className="border-rose-200 bg-rose-50/20">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div>
-                <CardTitle className="text-rose-900">Danger Zone</CardTitle>
-                <CardDescription className="text-rose-700">
-                  Irreversible account actions and data purging
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-zinc-900">
+                      Delete Account & All Ingested Data
+                    </h4>
+                    <p className="text-xs text-zinc-500 mt-0.5 max-w-md">
+                      Permanently delete your user profile, stored credentials, digest history, and feedback records. This cannot be undone.
+                    </p>
+                  </div>
 
-          <CardContent>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h4 className="text-sm font-semibold text-zinc-900">
-                  Delete Account & All Ingested Data
-                </h4>
-                <p className="text-xs text-zinc-500 mt-0.5 max-w-md">
-                  Permanently delete your user profile, stored credentials, digest history, and feedback records. This cannot be undone.
-                </p>
-              </div>
-
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => setIsDeleteModalOpen(true)}
-                leftIcon={<Trash2 className="w-4 h-4" />}
-              >
-                Delete Account
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => setIsDeleteModalOpen(true)}
+                    leftIcon={<Trash2 className="w-4 h-4" />}
+                  >
+                    Delete Account
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
 
       {/* Account Deletion Confirmation Modal */}

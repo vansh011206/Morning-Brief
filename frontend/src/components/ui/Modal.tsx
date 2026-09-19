@@ -48,10 +48,10 @@ export const Modal: React.FC<ModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-fade-in">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      {/* Backdrop with subtle blur */}
       <div
-        className="fixed inset-0 bg-zinc-900/40 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-zinc-900/20 backdrop-blur-sm transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -61,20 +61,20 @@ export const Modal: React.FC<ModalProps> = ({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'relative w-full bg-white rounded-2xl shadow-xl border border-zinc-200/80 z-10 overflow-hidden transform transition-all duration-200',
+          'relative w-full bg-white rounded-[24px] shadow-lg border border-zinc-200/80 z-10 overflow-hidden transform transition-all duration-200 ease-out',
           sizeStyles[size]
         )}
       >
         {(title || description) && (
-          <div className="flex items-start justify-between p-5 border-b border-zinc-100">
+          <div className="flex items-start justify-between p-5 sm:p-6 border-b border-zinc-100/90">
             <div>
               {title && (
-                <h3 className="text-base font-display font-semibold text-zinc-900">
+                <h3 className="text-base sm:text-lg font-display font-semibold text-zinc-900 tracking-tight">
                   {title}
                 </h3>
               )}
               {description && (
-                <p className="text-xs text-zinc-500 mt-1">{description}</p>
+                <p className="text-xs sm:text-sm text-zinc-500 mt-1 leading-relaxed">{description}</p>
               )}
             </div>
             <IconButton
@@ -82,11 +82,12 @@ export const Modal: React.FC<ModalProps> = ({
               variant="ghost"
               aria-label="Close dialog"
               onClick={onClose}
-              icon={<X className="w-4 h-4 text-zinc-500" />}
+              icon={<X className="w-4 h-4 text-zinc-400 hover:text-zinc-700" />}
+              className="rounded-lg"
             />
           </div>
         )}
-        <div className="p-5">{children}</div>
+        <div className="p-5 sm:p-6">{children}</div>
       </div>
     </div>
   )

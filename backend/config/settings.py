@@ -149,6 +149,9 @@ REST_FRAMEWORK = {
         'anon': '100/min',
         'user': '1000/min',
         'login': '5/min',
+        'auth': '5/min',
+        'feedback': '20/min',
+        'generate_now': '3/hour',
     },
 }
 
@@ -195,6 +198,7 @@ CELERY_TASK_EAGER_PROPAGATES = True
 # LLM Configuration
 LLM_PROVIDER = env('LLM_PROVIDER', default='openai')
 OPENAI_API_KEY = env('OPENAI_API_KEY', default='')
+OPENAI_BASE_URL = env('OPENAI_BASE_URL', default='')
 LLM_MODEL = env('LLM_MODEL', default='gpt-4o-mini')
 LLM_MAX_TOKENS = env.int('LLM_MAX_TOKENS', default=1500)
 
@@ -210,4 +214,27 @@ RESEND_API_KEY = env('RESEND_API_KEY', default='')
 
 # Frontend URL for links in emails
 FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')
+
+# Cryptographic Encryption Key for storing sensitive tokens (Fernet)
+# Key can be any 32-byte urlsafe base64 string or passphrase (derived via SHA-256)
+ENCRYPTION_KEY = env('ENCRYPTION_KEY', default=env('FERNET_KEY', default=SECRET_KEY))
+
+# Telegram Bot Configuration
+TELEGRAM_BOT_TOKEN = env('TELEGRAM_BOT_TOKEN', default=env('TELEGRAM_TOKEN', default=''))
+TELEGRAM_BOT_USERNAME = env('TELEGRAM_BOT_USERNAME', default='MorningBriefBot')
+
+# Google OAuth & Gmail Configuration
+GOOGLE_CLIENT_ID = env('GOOGLE_CLIENT_ID', default='')
+GOOGLE_CLIENT_SECRET = env('GOOGLE_CLIENT_SECRET', default='')
+GOOGLE_REDIRECT_URI = env('GOOGLE_REDIRECT_URI', default='http://localhost:8000/api/v1/connections/gmail/callback/')
+GMAIL_SCOPES = [
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/userinfo.email',
+]
+
+# GitHub OAuth Configuration
+GITHUB_CLIENT_ID = env('GITHUB_CLIENT_ID', default='')
+GITHUB_CLIENT_SECRET = env('GITHUB_CLIENT_SECRET', default='')
+GITHUB_REDIRECT_URI = env('GITHUB_REDIRECT_URI', default='http://localhost:8000/api/v1/connections/github/callback/')
+GITHUB_SCOPES = 'repo,notifications,read:user'
 

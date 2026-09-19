@@ -51,10 +51,10 @@ export const SegmentedTabs: React.FC<SegmentedTabsProps> = ({
             aria-selected={isActive}
             onClick={() => onChange(tab.id)}
             className={cn(
-              'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 select-none outline-none focus-visible:ring-2 focus-visible:ring-primary',
+              'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 select-none outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20 focus-visible:border-indigo-500',
               tabPadding[size],
               isActive
-                ? 'bg-white text-zinc-900 shadow-sm font-semibold'
+                ? 'bg-white text-zinc-900 shadow-xs font-semibold'
                 : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/50'
             )}
           >
@@ -63,9 +63,9 @@ export const SegmentedTabs: React.FC<SegmentedTabsProps> = ({
             {tab.badge !== undefined && (
               <span
                 className={cn(
-                  'ml-2 px-1.5 py-0.2 rounded-full text-[10px] font-bold tabular-nums',
+                  'ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold tabular-nums',
                   isActive
-                    ? 'bg-primary-light text-primary-700'
+                    ? 'bg-indigo-50 text-indigo-700'
                     : 'bg-zinc-200 text-zinc-700'
                 )}
               >

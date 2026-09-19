@@ -25,10 +25,13 @@ wheels/
 db.sqlite3
 db.sqlite3-journal
 
-# Logs
+# Logs & Testing
 *.log
 celerybeat-schedule
 celerybeat.pid
+.coverage
+htmlcov/
+.pytest_cache/
 
 # Node & Frontend
 node_modules/

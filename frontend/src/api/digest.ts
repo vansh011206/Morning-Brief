@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { Digest, PaginatedResponse, TestBriefResponse } from './types'
+import type { Digest, PaginatedResponse, TestBriefResponse, ItemFeedbackPayload } from './types'
 
 export const digestApi = {
   getTodayDigest: async (): Promise<Digest> => {
@@ -27,5 +27,9 @@ export const digestApi = {
     const res = await apiClient.post<TestBriefResponse>('/delivery/test-brief/')
     return res.data
   },
-}
 
+  submitFeedback: async (payload: ItemFeedbackPayload): Promise<any> => {
+    const res = await apiClient.post('/feedback/', payload)
+    return res.data
+  },
+}
