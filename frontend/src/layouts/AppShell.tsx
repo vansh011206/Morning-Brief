@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Inbox,
@@ -48,7 +48,6 @@ export const AppShell: React.FC = () => {
   const { user, logout } = useAuthStore()
   const { addToast } = useToastStore()
   const location = useLocation()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -107,17 +106,17 @@ export const AppShell: React.FC = () => {
     },
   })
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     const refresh = useAuthStore.getState().refreshToken
     if (refresh) {
-      try {
-        await authApi.logout(refresh)
-      } catch {
-        // Ignore network errors on logout
-      }
+      // Fire-and-forget backend token revocation
+      authApi.logout(refresh).catch(() => {})
     }
+    // Immediately clear auth store and query cache
     logout()
-    navigate('/login')
+    queryClient.clear()
+    // Clean full-page navigation to login
+    window.location.href = '/login'
   }
 
   // Global Cmd+K / Ctrl+K keyboard shortcut
@@ -337,10 +336,11 @@ export const AppShell: React.FC = () => {
             </NavLink>
 
             <button
+              type="button"
               onClick={handleLogout}
               aria-label="Sign out"
               title="Sign out"
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-rose-400 hover:bg-white/10 transition-colors"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-rose-400 hover:bg-white/10 transition-colors cursor-pointer"
             >
               <LogOut className="w-4 h-4" strokeWidth={1.75} />
             </button>
