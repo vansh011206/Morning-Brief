@@ -21,27 +21,29 @@ import {
 import { Button } from '../components/ui'
 
 export const LandingPage: React.FC = () => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
+
   return (
     <div className="min-h-screen bg-[#FCFCF9] text-zinc-900 selection:bg-zinc-900 selection:text-white flex flex-col relative overflow-x-hidden">
       {/* Ambient Canvas Mesh Blobs */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-b from-indigo-500/10 via-amber-500/5 to-transparent rounded-full blur-[100px] pointer-events-none -z-10" />
-      <div className="absolute top-[800px] right-[-100px] w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[350px] sm:w-[800px] h-[300px] sm:h-[500px] bg-gradient-to-b from-indigo-500/10 via-amber-500/5 to-transparent rounded-full blur-[70px] sm:blur-[100px] pointer-events-none -z-10" />
+      <div className="absolute top-[800px] right-[-100px] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-indigo-500/5 rounded-full blur-[80px] sm:blur-[120px] pointer-events-none -z-10" />
 
       {/* ========================================================= */}
       {/* 1. TOP NAVIGATION BAR                                     */}
       {/* ========================================================= */}
-      <header className="sticky top-0 z-50 bg-[#FCFCF9]/80 backdrop-blur-md border-b border-zinc-200/80">
+      <header className="sticky top-0 z-50 bg-[#FCFCF9]/90 backdrop-blur-md border-b border-zinc-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           {/* Logo & Brand */}
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl overflow-hidden border border-zinc-200/80 shadow-sm transition-transform duration-200 group-hover:scale-105">
+          <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden border border-zinc-200/80 shadow-sm transition-transform duration-200 group-hover:scale-105">
               <img src="/logo.png" alt="MorningBrief Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col">
-              <span className="font-display font-bold text-[18px] tracking-tight text-zinc-900 leading-none">
+              <span className="font-display font-bold text-[16px] sm:text-[18px] tracking-tight text-zinc-900 leading-none">
                 MorningBrief
               </span>
-              <span className="text-[10px] font-semibold tracking-widest uppercase text-zinc-500 mt-1">
+              <span className="text-[9px] sm:text-[10px] font-semibold tracking-widest uppercase text-zinc-500 mt-1">
                 Executive Intelligence
               </span>
             </div>
@@ -63,13 +65,13 @@ export const LandingPage: React.FC = () => {
             </a>
           </nav>
 
-          {/* Auth CTA Buttons */}
-          <div className="flex items-center gap-3">
-            <Link to="/login">
+          {/* Right Action & Mobile Menu Toggle */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link to="/login" className="hidden sm:inline-block">
               <Button
                 variant="ghost"
                 size="sm"
-                className="rounded-xl px-4 text-[13px] font-semibold text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100"
+                className="rounded-xl px-3 sm:px-4 text-[13px] font-semibold text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100"
               >
                 Sign In
               </Button>
@@ -78,14 +80,70 @@ export const LandingPage: React.FC = () => {
               <Button
                 variant="primary"
                 size="sm"
-                className="rounded-xl px-5 h-9 bg-zinc-900 hover:bg-zinc-800 text-white text-[13px] font-semibold shadow-sm"
+                className="rounded-xl px-3.5 sm:px-5 h-8 sm:h-9 bg-zinc-900 hover:bg-zinc-800 text-white text-[12px] sm:text-[13px] font-semibold shadow-sm"
                 rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
               >
                 Get Started
               </Button>
             </Link>
+
+            {/* Mobile Hamburger Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 rounded-xl text-zinc-600 hover:bg-zinc-100 transition-colors ml-1"
+              aria-label="Toggle navigation menu"
+            >
+              {isMobileMenuOpen ? (
+                <Lock className="w-5 h-5 text-zinc-900" />
+              ) : (
+                <Layers className="w-5 h-5 text-zinc-900" />
+              )}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden bg-[#FCFCF9] border-b border-zinc-200/80 px-4 pt-3 pb-5 space-y-3 shadow-lg">
+            <nav className="flex flex-col space-y-2 text-[14px] font-medium text-zinc-700">
+              <a
+                href="#features"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-lg hover:bg-zinc-100 transition-colors"
+              >
+                Features
+              </a>
+              <a
+                href="#how-it-works"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-lg hover:bg-zinc-100 transition-colors"
+              >
+                How It Works
+              </a>
+              <a
+                href="#integrations"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-lg hover:bg-zinc-100 transition-colors"
+              >
+                Integrations
+              </a>
+              <a
+                href="#security"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-lg hover:bg-zinc-100 transition-colors"
+              >
+                Security
+              </a>
+              <Link
+                to="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-lg hover:bg-zinc-100 transition-colors font-semibold text-zinc-900"
+              >
+                Sign In
+              </Link>
+            </nav>
+          </div>
+        )}
       </header>
 
       {/* ========================================================= */}

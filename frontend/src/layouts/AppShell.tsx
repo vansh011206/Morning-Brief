@@ -360,20 +360,20 @@ export const AppShell: React.FC = () => {
       {/* 2. CENTER MAIN CANVAS (flex-1, Warm Paper #FCFCF9, Bento) */}
       {/* ========================================================= */}
       <div className="flex-1 h-screen overflow-y-auto bg-[#FCFCF9] relative flex flex-col min-w-0">
-        {/* Center Header (72px tall, editorial, not sticky white glass) */}
-        <header className="h-[72px] shrink-0 border-b border-zinc-200/70 flex items-center justify-between px-6 lg:px-10 bg-[#FCFCF9]/80 backdrop-blur-md sticky top-0 z-20">
+        {/* Center Header (responsive height & padding) */}
+        <header className="h-[60px] sm:h-[72px] shrink-0 border-b border-zinc-200/70 flex items-center justify-between px-3 sm:px-6 lg:px-10 bg-[#FCFCF9]/90 backdrop-blur-md sticky top-0 z-20">
           {/* Left: Mobile hamburger + Wordmark / Greeting */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-2 rounded-xl text-zinc-600 hover:bg-zinc-100 transition-colors"
+              className="lg:hidden p-1.5 sm:p-2 rounded-xl text-zinc-600 hover:bg-zinc-100 transition-colors"
               aria-label="Open sidebar"
             >
               <Menu className="w-5 h-5" />
             </button>
 
             <div>
-              <h2 className="font-display font-bold text-[20px] sm:text-[24px] text-zinc-900 tracking-tight leading-tight">
+              <h2 className="font-display font-bold text-[16px] sm:text-[24px] text-zinc-900 tracking-tight leading-tight truncate max-w-[140px] xs:max-w-[200px] sm:max-w-none">
                 Executive Command Center
               </h2>
               <p className="text-[12px] text-zinc-500 font-medium hidden sm:block">
@@ -383,7 +383,7 @@ export const AppShell: React.FC = () => {
           </div>
 
           {/* Right: Cmd+K Trigger + Actions */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             {/* Command Palette Trigger */}
             <button
               onClick={() => setIsCommandPaletteOpen(true)}
@@ -412,26 +412,26 @@ export const AppShell: React.FC = () => {
             <button
               onClick={() => generateMutation.mutate(false)}
               disabled={generateMutation.isPending || isDigestFetching}
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-zinc-900 text-white shadow-lg hover:bg-black hover:shadow-xl hover:-translate-y-px active:scale-[0.98] text-[13px] font-semibold transition-all duration-200 disabled:opacity-50"
+              className="inline-flex items-center gap-1 sm:gap-1.5 h-8 sm:h-9 px-2.5 sm:px-4 rounded-full bg-zinc-900 text-white shadow-md hover:bg-black text-[12px] sm:text-[13px] font-semibold transition-all duration-200 disabled:opacity-50"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" strokeWidth={1.75} />
-              <span>{hasItems ? 'Re-rank Briefing' : 'Generate Briefing'}</span>
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" strokeWidth={1.75} />
+              <span className="hidden xs:inline">{hasItems ? 'Re-rank' : 'Generate'}</span>
             </button>
 
             {/* Right Panel Toggle (for screens < 1536px) */}
             <button
               onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
-              className="2xl:hidden p-2 rounded-xl text-zinc-600 hover:bg-zinc-100 transition-colors ml-1"
+              className="2xl:hidden p-1.5 sm:p-2 rounded-xl text-zinc-600 hover:bg-zinc-100 transition-colors ml-0.5"
               aria-label="Toggle intelligence panel"
               title="Toggle intelligence panel"
             >
-              <SlidersHorizontal className="w-5 h-5" />
+              <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </header>
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 2xl:p-10 max-w-[1200px] w-full mx-auto">
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 2xl:p-10 max-w-[1200px] w-full mx-auto pb-24 lg:pb-10">
           <Outlet />
         </main>
       </div>
@@ -643,6 +643,33 @@ export const AppShell: React.FC = () => {
           refetchDigest()
         }}
       />
+
+      {/* Mobile Bottom Navigation Bar (phones & tablets < lg) */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 h-16 bg-[#0F0F0F] border-t border-zinc-800 z-30 flex items-center justify-around px-2 text-white shadow-2xl">
+        {navItems.map((item) => {
+          const isActive = location.pathname.startsWith(item.to)
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={cn(
+                'flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[11px] font-medium transition-colors relative',
+                isActive ? 'text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'
+              )}
+            >
+              <div className="relative">
+                {item.icon}
+                {item.count !== undefined && item.count > 0 && (
+                  <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">
+                    {item.count}
+                  </span>
+                )}
+              </div>
+              <span className="mt-1 text-[10px] sm:text-[11px]">{item.label}</span>
+            </NavLink>
+          )
+        })}
+      </nav>
 
       {/* Global Toast Container */}
       <ToastContainer />

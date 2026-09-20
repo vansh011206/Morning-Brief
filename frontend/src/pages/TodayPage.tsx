@@ -182,17 +182,17 @@ export const TodayPage: React.FC = () => {
       {/* ========================================================= */}
       {/* TOP HERO ROW: 2-Column Grid (Greeting + Mini Stats Bento) */}
       {/* ========================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
         {/* Left Col: Greeting, Date, Delivered Badge */}
-        <div className="lg:col-span-8 space-y-3">
-          <div className="flex items-center gap-3">
-            <h1 className="font-display font-bold text-[34px] sm:text-[40px] text-zinc-900 tracking-tight leading-[1.1] flex items-center">
+        <div className="lg:col-span-8 space-y-2 sm:space-y-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <h1 className="font-display font-bold text-[26px] sm:text-[36px] lg:text-[40px] text-zinc-900 tracking-tight leading-[1.1] flex items-center">
               <span>Good morning, {firstName}</span>
-              <Sun className="w-7 h-7 text-amber-500 ml-3 inline-block shrink-0 animate-pulse" strokeWidth={1.75} />
+              <Sun className="w-6 h-6 sm:w-7 sm:h-7 text-amber-500 ml-2 sm:ml-3 inline-block shrink-0 animate-pulse" strokeWidth={1.75} />
             </h1>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 text-[13.5px] text-zinc-500 tabular-nums">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 text-[12px] sm:text-[13.5px] text-zinc-500 tabular-nums">
             <span>{todayFormatted}</span>
             <span>&bull;</span>
             <span>{user?.profile?.timezone || 'Asia/Kolkata'}</span>
@@ -220,27 +220,27 @@ export const TodayPage: React.FC = () => {
         </div>
 
         {/* Right Col: AI Cost + Stats Mini Bento (2x1) */}
-        <div className="lg:col-span-4 grid grid-cols-2 gap-3">
-          <div className="rounded-[16px] bg-white border border-zinc-200/80 shadow-xs p-3.5 flex flex-col justify-between">
+        <div className="lg:col-span-4 grid grid-cols-2 gap-2.5 sm:gap-3">
+          <div className="rounded-[16px] bg-white border border-zinc-200/80 shadow-xs p-3 sm:p-3.5 flex flex-col justify-between">
             <div className="flex items-center justify-between text-zinc-400 mb-1">
               <span className="text-[10px] uppercase font-bold tracking-wider">Synthesized</span>
               <Zap className="w-3.5 h-3.5 text-amber-500" />
             </div>
-            <p className="font-display font-bold text-[22px] text-zinc-900 tabular-nums leading-none">
+            <p className="font-display font-bold text-[20px] sm:text-[22px] text-zinc-900 tabular-nums leading-none">
               {digest?.item_count || 0}
             </p>
-            <span className="text-[10.5px] text-zinc-500 mt-1">across {sectionsList.length} sections</span>
+            <span className="text-[10px] sm:text-[10.5px] text-zinc-500 mt-1">across {sectionsList.length} sections</span>
           </div>
 
-          <div className="rounded-[16px] bg-white border border-zinc-200/80 shadow-xs p-3.5 flex flex-col justify-between">
+          <div className="rounded-[16px] bg-white border border-zinc-200/80 shadow-xs p-3 sm:p-3.5 flex flex-col justify-between">
             <div className="flex items-center justify-between text-zinc-400 mb-1">
               <span className="text-[10px] uppercase font-bold tracking-wider">AI Cost</span>
               <TrendingUp className="w-3.5 h-3.5 text-indigo-500" />
             </div>
-            <p className="font-display font-bold text-[22px] text-zinc-900 tabular-nums leading-none">
+            <p className="font-display font-bold text-[20px] sm:text-[22px] text-zinc-900 tabular-nums leading-none">
               {digest?.llm_cost_cents ? `${digest.llm_cost_cents}¢` : '0¢'}
             </p>
-            <span className="text-[10.5px] text-zinc-500 mt-1">executive synthesis</span>
+            <span className="text-[10px] sm:text-[10.5px] text-zinc-500 mt-1">executive synthesis</span>
           </div>
         </div>
       </div>
@@ -248,12 +248,12 @@ export const TodayPage: React.FC = () => {
       {/* ========================================================= */}
       {/* VIEW TABS: Pill Segmented Control in Dark Container       */}
       {/* ========================================================= */}
-      <div className="flex items-center justify-between border-b border-zinc-200/70 pb-4">
-        <div className="rounded-full bg-zinc-900 p-1 inline-flex gap-1 shadow-sm">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-b border-zinc-200/70 pb-4 gap-3">
+        <div className="rounded-full bg-zinc-900 p-1 inline-flex gap-1 shadow-sm w-full sm:w-auto">
           <button
             onClick={() => setViewMode('digest')}
             className={cn(
-              'rounded-full px-5 h-9 text-[13px] font-semibold transition-all duration-200 select-none inline-flex items-center',
+              'flex-1 sm:flex-none justify-center rounded-full px-4 sm:px-5 h-9 text-[12px] sm:text-[13px] font-semibold transition-all duration-200 select-none inline-flex items-center',
               viewMode === 'digest'
                 ? 'bg-white text-zinc-900 shadow-xs'
                 : 'text-zinc-400 hover:text-white'
@@ -275,7 +275,7 @@ export const TodayPage: React.FC = () => {
           <button
             onClick={() => setViewMode('raw')}
             className={cn(
-              'rounded-full px-5 h-9 text-[13px] font-semibold transition-all duration-200 select-none inline-flex items-center',
+              'flex-1 sm:flex-none justify-center rounded-full px-4 sm:px-5 h-9 text-[12px] sm:text-[13px] font-semibold transition-all duration-200 select-none inline-flex items-center',
               viewMode === 'raw'
                 ? 'bg-white text-zinc-900 shadow-xs'
                 : 'text-zinc-400 hover:text-white'
