@@ -160,7 +160,7 @@ export const TodayPage: React.FC = () => {
   }, [safeRawItems, pipelineCategory])
 
   const todayFormatted = format(new Date(), 'EEEE, d MMMM')
-  const firstName = user?.first_name || user?.name?.split(' ')[0] || 'Vanshaj'
+  const firstName = user?.first_name || user?.name?.split(' ')[0] || (user?.email ? user.email.split('@')[0] : 'Member')
   const hasItems = digest && digest.items && Array.isArray(digest.items) && digest.items.length > 0
   const sectionsList = digest?.sections ? Object.values(digest.sections) : []
   const isDelivered = digest?.status === 'delivered' || !!digest?.delivered_at

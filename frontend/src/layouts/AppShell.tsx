@@ -169,7 +169,7 @@ export const AppShell: React.FC = () => {
     { to: '/settings', label: 'Settings', icon: <Settings className="w-[18px] h-[18px]" strokeWidth={1.75} /> },
   ]
 
-  const firstName = user?.first_name || user?.name?.split(' ')[0] || 'Vanshaj'
+  const firstName = user?.first_name || user?.name?.split(' ')[0] || (user?.email ? user.email.split('@')[0] : 'Member')
   const isDelivered = digest?.status === 'delivered' || !!digest?.delivered_at
   const hasItems = digest && digest.items && Array.isArray(digest.items) && digest.items.length > 0
 

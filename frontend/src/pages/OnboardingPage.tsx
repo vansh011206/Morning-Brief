@@ -5,6 +5,7 @@ import {
   Mail,
   Send,
   Github,
+  Calendar,
   Rss,
   Check,
   ChevronLeft,
@@ -60,6 +61,7 @@ export const OnboardingPage: React.FC = () => {
   )
   const [connectedGmail, setConnectedGmail] = useState(false)
   const [connectedGithub, setConnectedGithub] = useState(false)
+  const [connectedCalendar, setConnectedCalendar] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Timezone dropdown state
@@ -72,6 +74,16 @@ export const OnboardingPage: React.FC = () => {
       setName(user.name || user.first_name)
     }
   }, [user])
+
+  useEffect(() => {
+    connectionsApi.getConnections().then((conns) => {
+      if (Array.isArray(conns)) {
+        setConnectedGmail(conns.some((c) => c.provider === 'gmail' && c.is_active))
+        setConnectedGithub(conns.some((c) => c.provider === 'github' && c.is_active))
+        setConnectedCalendar(conns.some((c) => c.provider === 'calendar' && c.is_active))
+      }
+    }).catch(() => {})
+  }, [])
 
   // Close timezone dropdown on outside click
   useEffect(() => {
@@ -449,7 +461,7 @@ export const OnboardingPage: React.FC = () => {
                   <div>
                     <h4 className="text-[15px] font-semibold text-zinc-900">Google Gmail</h4>
                     <p className="text-[13px] text-zinc-500">
-                      {connectedGmail ? 'Connected as user@gmail.com' : 'Read-only access to email headers'}
+                      {connectedGmail ? 'Connected to Gmail' : 'Read-only access to email headers'}
                     </p>
                   </div>
                 </div>
@@ -465,8 +477,8 @@ export const OnboardingPage: React.FC = () => {
                           window.location.href = data.url || data.auth_url
                           return
                         }
-                      } catch {
-                        // Demo toggle
+                      } catch (err) {
+                        console.error('Gmail OAuth error:', err)
                       }
                       setConnectedGmail(true)
                     } else {
@@ -475,6 +487,44 @@ export const OnboardingPage: React.FC = () => {
                   }}
                 >
                   {connectedGmail ? 'Connected' : 'Connect'}
+                </Button>
+              </div>
+
+              {/* Google Calendar */}
+              <div className="rounded-[20px] border border-zinc-200/80 p-5 flex items-center justify-between hover:shadow-sm transition-all bg-white">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                    <Calendar className="w-5 h-5 text-blue-600" strokeWidth={1.75} />
+                  </div>
+                  <div>
+                    <h4 className="text-[15px] font-semibold text-zinc-900">Google Calendar</h4>
+                    <p className="text-[13px] text-zinc-500">
+                      {connectedCalendar ? 'Connected (Daily Agenda)' : 'Daily meetings and agenda synchronization'}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant={connectedCalendar ? 'secondary' : 'outline'}
+                  className="rounded-xl h-9 px-4 text-[13px] font-semibold"
+                  onClick={async () => {
+                    if (!connectedCalendar) {
+                      try {
+                        const data = await connectionsApi.getCalendarAuthUrl()
+                        if (data?.url || data?.auth_url) {
+                          window.location.href = data.url || data.auth_url
+                          return
+                        }
+                      } catch (err) {
+                        console.error('Calendar OAuth error:', err)
+                      }
+                      setConnectedCalendar(true)
+                    } else {
+                      setConnectedCalendar(false)
+                    }
+                  }}
+                >
+                  {connectedCalendar ? 'Connected' : 'Connect'}
                 </Button>
               </div>
 
@@ -487,7 +537,7 @@ export const OnboardingPage: React.FC = () => {
                   <div>
                     <h4 className="text-[15px] font-semibold text-zinc-900">GitHub</h4>
                     <p className="text-[13px] text-zinc-500">
-                      {connectedGithub ? 'Connected as @developer' : 'Pull requests, assigned issues & alerts'}
+                      {connectedGithub ? 'Connected to GitHub' : 'Pull requests, assigned issues & alerts'}
                     </p>
                   </div>
                 </div>
@@ -495,7 +545,22 @@ export const OnboardingPage: React.FC = () => {
                   size="sm"
                   variant={connectedGithub ? 'secondary' : 'outline'}
                   className="rounded-xl h-9 px-4 text-[13px] font-semibold"
-                  onClick={() => setConnectedGithub(!connectedGithub)}
+                  onClick={async () => {
+                    if (!connectedGithub) {
+                      try {
+                        const data = await connectionsApi.getGithubAuthUrl()
+                        if (data?.url || data?.auth_url) {
+                          window.location.href = data.url || data.auth_url
+                          return
+                        }
+                      } catch (err) {
+                        console.error('GitHub OAuth error:', err)
+                      }
+                      setConnectedGithub(true)
+                    } else {
+                      setConnectedGithub(false)
+                    }
+                  }}
                 >
                   {connectedGithub ? 'Connected' : 'Connect'}
                 </Button>

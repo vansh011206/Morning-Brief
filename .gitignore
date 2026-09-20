@@ -45,6 +45,7 @@ frontend/.vite/
 .env
 .env.local
 .env.*.local
+deployment_env_vars.txt
 
 # IDE
 .idea/
