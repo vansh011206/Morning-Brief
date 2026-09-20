@@ -31,11 +31,12 @@ EXCLUDE_DIRS = {
     '__pycache__', '.pytest_cache', 'staticfiles', '.system_generated'
 }
 
-# Allow tests that specifically test emoji detection
+# Allow tests that specifically test emoji detection or external chat bot formatters (Telegram bot)
 ALLOWED_TEST_FILES = {
     'lint_emojis.py',
     'test_delivery.py',
     'tests.py',
+    'run_telegram_bot.py',
 }
 
 
@@ -80,7 +81,7 @@ def main():
                     violations = check_file(p)
                     if violations:
                         for line_no, emoji_char in violations:
-                            print(f"[EMOJI VIOLATION] {p.relative_to(root_dir)}:{line_no} -> Found: {emoji_char}")
+                            print(f"[EMOJI VIOLATION] {p.relative_to(root_dir)}:{line_no} -> Found: {ascii(emoji_char)}")
                             total_violations += 1
 
     if total_violations > 0:
