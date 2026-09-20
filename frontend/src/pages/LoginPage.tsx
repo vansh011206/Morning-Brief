@@ -49,12 +49,8 @@ export const LoginPage: React.FC = () => {
         description: `Signed in as ${user.name || user.email}`,
       })
 
-      // 3. Route to onboarding if not completed, otherwise to today
-      if (!user.profile?.completed_at) {
-        navigate('/onboarding')
-      } else {
-        navigate('/today')
-      }
+      // 3. Route to connections panel screen (onboarding step 4)
+      navigate('/onboarding?step=4')
     } catch (err: any) {
       console.error('Login error:', err)
       if (err.response?.status === 429) {

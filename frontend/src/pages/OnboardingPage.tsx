@@ -48,10 +48,23 @@ const TIME_PRESETS = [
 export const OnboardingPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { user, setUser } = useAuthStore()
+  const { user, setUser, isAuthenticated } = useAuthStore()
   const { addToast } = useToastStore()
 
-  const [step, setStep] = useState(1)
+  // Start directly at step 4 (connections) if google_connected or step=4 is in query parameters
+  const [step, setStep] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('google_connected') === 'true' || params.get('step') === '4') {
+      return 4
+    }
+    return 1
+  })
+
+  const [userEmail, setUserEmail] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('email') || user?.email || ''
+  })
+
   const [name, setName] = useState(user?.name || user?.first_name || '')
   const [deliveryChannel, setDeliveryChannel] = useState<DeliveryChannel>(
     user?.profile?.delivery_channel || 'email'
@@ -65,6 +78,14 @@ export const OnboardingPage: React.FC = () => {
   const [connectedCalendar, setConnectedCalendar] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Redirect to login if user is completely unauthenticated and has no tokens in URL
+  useEffect(() => {
+    const access = searchParams.get('access')
+    if (!isAuthenticated && !access && !localStorage.getItem('morningbrief_access_token')) {
+      navigate('/login', { replace: true })
+    }
+  }, [isAuthenticated, searchParams, navigate])
+
   // Check URL for Google OAuth callback tokens
   useEffect(() => {
     const access = searchParams.get('access')
@@ -72,11 +93,16 @@ export const OnboardingPage: React.FC = () => {
     const email = searchParams.get('email')
     const googleConnected = searchParams.get('google_connected') === 'true'
 
+    if (email) {
+      setUserEmail(email)
+    }
+
     if (access && refresh) {
       useAuthStore.getState().setTokens({ access, refresh })
       authApi.getMe().then((u) => {
         setUser(u)
         if (u.name || u.first_name) setName(u.name || u.first_name)
+        if (u.email) setUserEmail(u.email)
       }).catch(() => {})
       setConnectedGmail(true)
       if (googleConnected) {
@@ -493,9 +519,9 @@ export const OnboardingPage: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-[13px] text-zinc-600 mt-0.5">
-                      {connectedGmail || user?.email ? (
+                      {connectedGmail || userEmail ? (
                         <>
-                          Connected with this email: <strong className="text-zinc-900 font-semibold">{user?.email || 'your-email@gmail.com'}</strong>
+                          Connected with this email: <strong className="text-zinc-900 font-semibold">{userEmail || 'your-email@gmail.com'}</strong>
                         </>
                       ) : (
                         'Connect your Gmail to ingest your daily briefing emails'
@@ -505,7 +531,7 @@ export const OnboardingPage: React.FC = () => {
                 </div>
                 <Button
                   size="sm"
-                  variant={connectedGmail || user?.email ? 'outline' : 'primary'}
+                  variant={connectedGmail || userEmail ? 'outline' : 'primary'}
                   className="rounded-xl h-9 px-4 text-[13px] font-semibold shrink-0"
                   onClick={async () => {
                     try {
@@ -518,7 +544,7 @@ export const OnboardingPage: React.FC = () => {
                     }
                   }}
                 >
-                  {connectedGmail || user?.email ? 'Change Email' : 'Connect Gmail'}
+                  {connectedGmail || userEmail ? 'Change Email' : 'Connect Gmail'}
                 </Button>
               </div>
 
