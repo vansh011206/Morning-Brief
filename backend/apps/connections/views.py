@@ -202,12 +202,14 @@ class GmailAuthUrlView(APIView):
     """
     GET /api/v1/connections/gmail/auth-url/
     Returns Google OAuth authorization consent URL with a cryptographically signed state token.
+    AllowAny allows unauthenticated users to 'Continue with Google' to sign up or log in.
     """
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.AllowAny,)
 
     def get(self, request):
         from .gmail_service import get_gmail_auth_url
-        auth_url = get_gmail_auth_url(request.user.id)
+        user_id = request.user.id if request.user and request.user.is_authenticated else 0
+        auth_url = get_gmail_auth_url(user_id)
         return Response({"auth_url": auth_url, "url": auth_url})
 
 
@@ -215,6 +217,7 @@ class GmailCallbackView(APIView):
     """
     GET /api/v1/connections/gmail/callback/
     Validates state, exchanges authorization code for tokens, encrypts & stores them on Connection.
+    Supports both Google Sign Up / Login (user_id == 0) and existing account connection (user_id > 0).
     """
     permission_classes = (permissions.AllowAny,)
 
@@ -222,6 +225,7 @@ class GmailCallbackView(APIView):
         from django.contrib.auth import get_user_model
         from django.http import HttpResponseRedirect
         from django.conf import settings
+        from rest_framework_simplejwt.tokens import RefreshToken
         from .gmail_service import (
             verify_gmail_state,
             exchange_code_for_tokens,
@@ -245,15 +249,6 @@ class GmailCallbackView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        User = get_user_model()
-        try:
-            user = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
-            return Response(
-                {"error": "User associated with state not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
         try:
             token_data = exchange_code_for_tokens(code)
         except Exception as e:
@@ -263,7 +258,34 @@ class GmailCallbackView(APIView):
                 status=status.HTTP_502_BAD_GATEWAY
             )
 
-        email = token_data.get('email', '')
+        email = token_data.get('email', '').strip()
+        if not email:
+            return Response(
+                {"error": "Could not retrieve email from Google profile."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        User = get_user_model()
+        is_login_flow = False
+
+        if user_id == 0:
+            is_login_flow = True
+            user = User.objects.filter(email=email).first()
+            if not user:
+                user = User.objects.create_user(
+                    email=email,
+                    username=email,
+                    first_name=email.split('@')[0],
+                )
+        else:
+            try:
+                user = User.objects.get(pk=user_id)
+            except User.DoesNotExist:
+                return Response(
+                    {"error": "User associated with state not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
         external_account = email or f"gmail_{user.id}"
         display_name = f"Gmail ({email})" if email else "Google Gmail"
 
@@ -289,6 +311,16 @@ class GmailCallbackView(APIView):
         except Exception as e:
             logger.warning(f"Initial Gmail sync failed: {e}")
 
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+
+        # If Google sign in / sign up, issue JWT tokens and redirect to onboarding
+        if is_login_flow:
+            refresh = RefreshToken.for_user(user)
+            access = str(refresh.access_token)
+            return HttpResponseRedirect(
+                f"{frontend_url}/onboarding?access={access}&refresh={str(refresh)}&email={email}&google_connected=true"
+            )
+
         # Redirect to frontend if web browser navigation, or return JSON
         accept_header = request.headers.get('Accept', '')
         if 'application/json' in accept_header or request.query_params.get('format') == 'json':
@@ -298,7 +330,6 @@ class GmailCallbackView(APIView):
                 "connection": ConnectionSerializer(connection).data,
             })
 
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
         return HttpResponseRedirect(f"{frontend_url}/connections?connected=gmail")
 
 

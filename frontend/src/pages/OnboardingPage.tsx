@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Sun,
   Mail,
@@ -47,6 +47,7 @@ const TIME_PRESETS = [
 
 export const OnboardingPage: React.FC = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user, setUser } = useAuthStore()
   const { addToast } = useToastStore()
 
@@ -63,6 +64,32 @@ export const OnboardingPage: React.FC = () => {
   const [connectedGithub, setConnectedGithub] = useState(false)
   const [connectedCalendar, setConnectedCalendar] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Check URL for Google OAuth callback tokens
+  useEffect(() => {
+    const access = searchParams.get('access')
+    const refresh = searchParams.get('refresh')
+    const email = searchParams.get('email')
+    const googleConnected = searchParams.get('google_connected') === 'true'
+
+    if (access && refresh) {
+      useAuthStore.getState().setTokens({ access, refresh })
+      authApi.getMe().then((u) => {
+        setUser(u)
+        if (u.name || u.first_name) setName(u.name || u.first_name)
+      }).catch(() => {})
+      setConnectedGmail(true)
+      if (googleConnected) {
+        setStep(4)
+      }
+      addToast({
+        type: 'success',
+        title: 'Google Account Connected',
+        description: `Successfully authenticated with ${email || 'Google'}.`,
+      })
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [searchParams, setUser, addToast])
 
   // Timezone dropdown state
   const [isTzDropdownOpen, setIsTzDropdownOpen] = useState(false)
@@ -447,58 +474,68 @@ export const OnboardingPage: React.FC = () => {
                 Connect your sources
               </h2>
               <p className="text-[14px] text-zinc-500 mt-1">
-                Link feeds and inboxes to let AI distill your morning brief.
+                Your email is the primary briefing source. All other integrations are completely optional.
               </p>
             </div>
 
             <div className="space-y-3">
-              {/* Google Gmail */}
-              <div className="rounded-[20px] border border-zinc-200/80 p-5 flex items-center justify-between hover:shadow-sm transition-all bg-white">
-                <div className="flex items-center gap-3.5">
+              {/* Google Gmail - REQUIRED / PRIMARY */}
+              <div className="rounded-[20px] border-2 border-indigo-200 bg-indigo-50/20 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start sm:items-center gap-3.5">
                   <div className="w-11 h-11 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0">
                     <Mail className="w-5 h-5 text-rose-600" strokeWidth={1.75} />
                   </div>
                   <div>
-                    <h4 className="text-[15px] font-semibold text-zinc-900">Google Gmail</h4>
-                    <p className="text-[13px] text-zinc-500">
-                      {connectedGmail ? 'Connected to Gmail' : 'Read-only access to email headers'}
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-[15px] font-semibold text-zinc-900">Google Gmail</h4>
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                        Required
+                      </span>
+                    </div>
+                    <p className="text-[13px] text-zinc-600 mt-0.5">
+                      {connectedGmail || user?.email ? (
+                        <>
+                          Connected with this email: <strong className="text-zinc-900 font-semibold">{user?.email || 'your-email@gmail.com'}</strong>
+                        </>
+                      ) : (
+                        'Connect your Gmail to ingest your daily briefing emails'
+                      )}
                     </p>
                   </div>
                 </div>
                 <Button
                   size="sm"
-                  variant={connectedGmail ? 'secondary' : 'outline'}
-                  className="rounded-xl h-9 px-4 text-[13px] font-semibold"
+                  variant={connectedGmail || user?.email ? 'outline' : 'primary'}
+                  className="rounded-xl h-9 px-4 text-[13px] font-semibold shrink-0"
                   onClick={async () => {
-                    if (!connectedGmail) {
-                      try {
-                        const data = await connectionsApi.getGmailAuthUrl()
-                        if (data?.url || data?.auth_url) {
-                          window.location.href = data.url || data.auth_url
-                          return
-                        }
-                      } catch (err) {
-                        console.error('Gmail OAuth error:', err)
+                    try {
+                      const data = await connectionsApi.getGmailAuthUrl()
+                      if (data?.url || data?.auth_url) {
+                        window.location.href = data.url || data.auth_url
                       }
-                      setConnectedGmail(true)
-                    } else {
-                      setConnectedGmail(false)
+                    } catch (err) {
+                      console.error('Gmail OAuth error:', err)
                     }
                   }}
                 >
-                  {connectedGmail ? 'Connected' : 'Connect'}
+                  {connectedGmail || user?.email ? 'Change Email' : 'Connect Gmail'}
                 </Button>
               </div>
 
-              {/* Google Calendar */}
-              <div className="rounded-[20px] border border-zinc-200/80 p-5 flex items-center justify-between hover:shadow-sm transition-all bg-white">
-                <div className="flex items-center gap-3.5">
+              {/* Google Calendar - OPTIONAL */}
+              <div className="rounded-[20px] border border-zinc-200/80 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-sm transition-all bg-white">
+                <div className="flex items-start sm:items-center gap-3.5">
                   <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
                     <Calendar className="w-5 h-5 text-blue-600" strokeWidth={1.75} />
                   </div>
                   <div>
-                    <h4 className="text-[15px] font-semibold text-zinc-900">Google Calendar</h4>
-                    <p className="text-[13px] text-zinc-500">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-[15px] font-semibold text-zinc-900">Google Calendar</h4>
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500">
+                        Optional
+                      </span>
+                    </div>
+                    <p className="text-[13px] text-zinc-500 mt-0.5">
                       {connectedCalendar ? 'Connected (Daily Agenda)' : 'Daily meetings and agenda synchronization'}
                     </p>
                   </div>
@@ -506,7 +543,7 @@ export const OnboardingPage: React.FC = () => {
                 <Button
                   size="sm"
                   variant={connectedCalendar ? 'secondary' : 'outline'}
-                  className="rounded-xl h-9 px-4 text-[13px] font-semibold"
+                  className="rounded-xl h-9 px-4 text-[13px] font-semibold shrink-0"
                   onClick={async () => {
                     if (!connectedCalendar) {
                       try {
@@ -524,27 +561,32 @@ export const OnboardingPage: React.FC = () => {
                     }
                   }}
                 >
-                  {connectedCalendar ? 'Connected' : 'Connect'}
+                  {connectedCalendar ? 'Connected' : 'Connect Calendar'}
                 </Button>
               </div>
 
-              {/* GitHub */}
-              <div className="rounded-[20px] border border-zinc-200/80 p-5 flex items-center justify-between hover:shadow-sm transition-all bg-white">
-                <div className="flex items-center gap-3.5">
+              {/* GitHub - OPTIONAL */}
+              <div className="rounded-[20px] border border-zinc-200/80 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-sm transition-all bg-white">
+                <div className="flex items-start sm:items-center gap-3.5">
                   <div className="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-white shrink-0">
                     <Github className="w-5 h-5 text-white" strokeWidth={1.75} />
                   </div>
                   <div>
-                    <h4 className="text-[15px] font-semibold text-zinc-900">GitHub</h4>
-                    <p className="text-[13px] text-zinc-500">
-                      {connectedGithub ? 'Connected to GitHub' : 'Pull requests, assigned issues & alerts'}
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-[15px] font-semibold text-zinc-900">GitHub</h4>
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500">
+                        Optional
+                      </span>
+                    </div>
+                    <p className="text-[13px] text-zinc-500 mt-0.5">
+                      {connectedGithub ? 'Connected to GitHub' : 'Pull requests, assigned issues & repository alerts'}
                     </p>
                   </div>
                 </div>
                 <Button
                   size="sm"
                   variant={connectedGithub ? 'secondary' : 'outline'}
-                  className="rounded-xl h-9 px-4 text-[13px] font-semibold"
+                  className="rounded-xl h-9 px-4 text-[13px] font-semibold shrink-0"
                   onClick={async () => {
                     if (!connectedGithub) {
                       try {
@@ -562,24 +604,29 @@ export const OnboardingPage: React.FC = () => {
                     }
                   }}
                 >
-                  {connectedGithub ? 'Connected' : 'Connect'}
+                  {connectedGithub ? 'Connected' : 'Connect GitHub'}
                 </Button>
               </div>
 
-              {/* Curated Tech RSS Feeds */}
-              <div className="rounded-[20px] border border-zinc-200/80 p-5 flex items-center justify-between hover:shadow-sm transition-all bg-white">
-                <div className="flex items-center gap-3.5">
+              {/* Curated Tech RSS Feeds - INCLUDED */}
+              <div className="rounded-[20px] border border-zinc-200/80 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-sm transition-all bg-white">
+                <div className="flex items-start sm:items-center gap-3.5">
                   <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
                     <Rss className="w-5 h-5 text-amber-600" strokeWidth={1.75} />
                   </div>
                   <div>
-                    <h4 className="text-[15px] font-semibold text-zinc-900">Tech News & RSS</h4>
-                    <p className="text-[13px] text-zinc-500">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-[15px] font-semibold text-zinc-900">Tech News & RSS</h4>
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                        Included
+                      </span>
+                    </div>
+                    <p className="text-[13px] text-zinc-500 mt-0.5">
                       Pre-configured feeds: Hacker News, BBC Tech, MIT Review
                     </p>
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+                <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 shrink-0">
                   <Check className="w-3.5 h-3.5" />
                   Active
                 </span>
@@ -592,7 +639,7 @@ export const OnboardingPage: React.FC = () => {
                 onClick={handleFinish}
                 className="text-[13px] text-zinc-400 hover:text-zinc-900 transition-colors font-medium cursor-pointer"
               >
-                Skip for now, I'll connect later
+                Skip for now, go to Dashboard
               </button>
             </div>
           </div>

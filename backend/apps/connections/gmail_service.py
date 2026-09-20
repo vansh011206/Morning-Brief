@@ -29,7 +29,7 @@ SPAM_KEYWORDS = [
 ]
 
 
-def generate_gmail_state(user_id: int) -> str:
+def generate_gmail_state(user_id: int = 0) -> str:
     """Generates a cryptographically signed state token valid for 10 minutes (600s)."""
     signer = TimestampSigner()
     return signer.sign(f"gmail_oauth:{user_id}")
@@ -53,7 +53,7 @@ def verify_gmail_state(state: str) -> int:
         raise ValueError("Malformed OAuth state content")
 
 
-def get_gmail_auth_url(user_id: int) -> str:
+def get_gmail_auth_url(user_id: int = 0) -> str:
     """Constructs the Google OAuth consent URL with signed state."""
     state = generate_gmail_state(user_id)
     scope_str = " ".join(getattr(settings, 'GMAIL_SCOPES', GMAIL_SCOPES))

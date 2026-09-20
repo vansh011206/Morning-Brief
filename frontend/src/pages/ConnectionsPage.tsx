@@ -33,6 +33,7 @@ import {
 import { connectionsApi, type CreateConnectionPayload } from '../api/connections'
 import type { Connection } from '../api/types'
 import { useToastStore } from '../store/useToastStore'
+import { useAuthStore } from '../store/useAuthStore'
 
 function formatSyncTime(timestamp: string | null): string {
   if (!timestamp) return 'Never'
@@ -50,6 +51,7 @@ function formatSyncTime(timestamp: string | null): string {
 export const ConnectionsPage: React.FC = () => {
   const queryClient = useQueryClient()
   const { addToast } = useToastStore()
+  const { user } = useAuthStore()
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false)
@@ -448,7 +450,12 @@ export const ConnectionsPage: React.FC = () => {
                       <Github className="w-6 h-6" strokeWidth={1.75} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-[15px] font-semibold text-zinc-900 truncate">GitHub</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-[15px] font-semibold text-zinc-900 truncate">GitHub</h3>
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500">
+                          Optional
+                        </span>
+                      </div>
                       <span className="text-xs font-mono text-zinc-400">OAuth 2.0</span>
                     </div>
                   </div>
@@ -601,7 +608,12 @@ export const ConnectionsPage: React.FC = () => {
                       <Mail className="w-6 h-6 text-rose-600" strokeWidth={1.75} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-[15px] font-semibold text-zinc-900 truncate">Google Gmail</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-[15px] font-semibold text-zinc-900 truncate">Google Gmail</h3>
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                          Required
+                        </span>
+                      </div>
                       <span className="text-xs font-mono text-zinc-400">OAuth 2.0</span>
                     </div>
                   </div>
@@ -647,9 +659,11 @@ export const ConnectionsPage: React.FC = () => {
                       <div className="flex items-start gap-2 text-xs text-emerald-800 bg-emerald-50/80 p-3 rounded-xl border border-emerald-100">
                         <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" strokeWidth={1.75} />
                         <div className="min-w-0">
-                          <p className="font-semibold truncate">Connected: {gmailConn?.display_name || gmailConn?.external_account}</p>
+                          <p className="font-semibold truncate">
+                            Connected with this email: <strong className="font-bold text-zinc-900">{gmailConn?.display_name?.replace('Gmail (', '').replace(')', '') || gmailConn?.external_account || user?.email}</strong>
+                          </p>
                           <p className="text-[11px] text-emerald-700 mt-0.5">
-                            Actively monitored for executive morning summaries.
+                            Primary source for executive morning summaries.
                           </p>
                         </div>
                       </div>
@@ -710,7 +724,7 @@ export const ConnectionsPage: React.FC = () => {
                       }
                     }}
                   >
-                    {isGmailConnected ? 'Reconnect Gmail' : 'Connect Gmail'}
+                    {isGmailConnected ? 'Change Email' : 'Connect Gmail'}
                   </Button>
                 </div>
               </div>
@@ -728,7 +742,12 @@ export const ConnectionsPage: React.FC = () => {
                       <Send className="w-6 h-6 text-sky-600" strokeWidth={1.75} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-[15px] font-semibold text-zinc-900 truncate">Telegram Messenger</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-[15px] font-semibold text-zinc-900 truncate">Telegram Messenger</h3>
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500">
+                          Optional
+                        </span>
+                      </div>
                       <span className="text-xs font-mono text-zinc-400">Bot Webhook</span>
                     </div>
                   </div>
@@ -796,7 +815,12 @@ export const ConnectionsPage: React.FC = () => {
                       <Calendar className="w-6 h-6 text-amber-600" strokeWidth={1.75} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-[15px] font-semibold text-zinc-900 truncate">Google Calendar</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-[15px] font-semibold text-zinc-900 truncate">Google Calendar</h3>
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500">
+                          Optional
+                        </span>
+                      </div>
                       <span className="text-xs font-mono text-zinc-400">OAuth 2.0</span>
                     </div>
                   </div>
