@@ -49,8 +49,8 @@ export const LoginPage: React.FC = () => {
         description: `Signed in as ${user.name || user.email}`,
       })
 
-      // 3. Route to onboarding delivery screen (step 2)
-      navigate('/onboarding?step=2')
+      // 3. Route to onboarding welcome screen (step 1)
+      navigate('/onboarding')
     } catch (err: any) {
       console.error('Login error:', err)
       if (err.response?.status === 429) {

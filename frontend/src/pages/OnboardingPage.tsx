@@ -51,15 +51,12 @@ export const OnboardingPage: React.FC = () => {
   const { user, setUser, isAuthenticated } = useAuthStore()
   const { addToast } = useToastStore()
 
-  // Start directly at step 2 (Delivery) if google_connected or step is in query parameters
+  // Start at step 1 (Welcome) by default, or specific ?step= if provided
   const [step, setStep] = useState(() => {
     const params = new URLSearchParams(window.location.search)
     const stepParam = params.get('step')
     if (stepParam) {
       return parseInt(stepParam, 10)
-    }
-    if (params.get('google_connected') === 'true') {
-      return 2
     }
     return 1
   })
@@ -95,7 +92,6 @@ export const OnboardingPage: React.FC = () => {
     const access = searchParams.get('access')
     const refresh = searchParams.get('refresh')
     const email = searchParams.get('email')
-    const googleConnected = searchParams.get('google_connected') === 'true'
 
     if (email) {
       setUserEmail(email)
@@ -109,8 +105,9 @@ export const OnboardingPage: React.FC = () => {
         if (u.email) setUserEmail(u.email)
       }).catch(() => {})
       setConnectedGmail(true)
-      if (googleConnected) {
-        setStep(2)
+      const stepParam = searchParams.get('step')
+      if (stepParam) {
+        setStep(parseInt(stepParam, 10))
       }
       addToast({
         type: 'success',
