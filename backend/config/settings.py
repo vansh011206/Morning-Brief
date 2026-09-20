@@ -14,12 +14,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
     DEBUG=(bool, True),
     SECRET_KEY=(str, 'django-insecure-morningbrief-dev-key-change-in-production'),
-    ALLOWED_HOSTS=(list, ['localhost', '127.0.0.1', '[::1]', 'testserver']),
+    ALLOWED_HOSTS=(list, ['localhost', '127.0.0.1', '[::1]', 'testserver', '.onrender.com', 'morning-brief-1t5b.onrender.com']),
     CORS_ALLOWED_ORIGINS=(list, [
         'http://localhost:5173',
         'http://127.0.0.1:5173',
         'http://localhost:3000',
         'http://127.0.0.1:3000',
+        'https://morning-brief-sepia.vercel.app',
+    ]),
+    CSRF_TRUSTED_ORIGINS=(list, [
+        'https://morning-brief-sepia.vercel.app',
+        'https://morning-brief-1t5b.onrender.com',
+        'http://localhost:5173',
+        'http://localhost:3000',
     ]),
 )
 
@@ -179,9 +186,10 @@ SPECTACULAR_SETTINGS = {
     'COMPONENT_SPLIT_REQUEST': True,
 }
 
-# CORS Settings
+# CORS & CSRF Settings
 CORS_ALLOWED_ORIGINS = env('CORS_ALLOWED_ORIGINS')
 CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = env('CSRF_TRUSTED_ORIGINS')
 
 # Celery & Redis Settings
 REDIS_URL = env('REDIS_URL', default='redis://127.0.0.1:6379/0')
@@ -227,6 +235,7 @@ TELEGRAM_BOT_USERNAME = env('TELEGRAM_BOT_USERNAME', default='MorningBriefBot')
 GOOGLE_CLIENT_ID = env('GOOGLE_CLIENT_ID', default='')
 GOOGLE_CLIENT_SECRET = env('GOOGLE_CLIENT_SECRET', default='')
 GOOGLE_REDIRECT_URI = env('GOOGLE_REDIRECT_URI', default='http://localhost:8000/api/v1/connections/gmail/callback/')
+GOOGLE_CALENDAR_REDIRECT_URI = env('GOOGLE_CALENDAR_REDIRECT_URI', default='http://localhost:8000/api/v1/connections/calendar/callback/')
 GMAIL_SCOPES = [
     'https://www.googleapis.com/auth/gmail.readonly',
     'https://www.googleapis.com/auth/userinfo.email',
