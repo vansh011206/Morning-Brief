@@ -89,5 +89,10 @@ export const connectionsApi = {
     const res = await apiClient.get<{ url: string; auth_url: string }>('/connections/github/auth-url/')
     return res.data
   },
+
+  getCalendarAuthUrl: async (): Promise<{ url: string; auth_url: string }> => {
+    const res = await apiClient.get<{ url: string; auth_url: string }>('/connections/calendar/auth-url/')
+    return res.data
+  },
 }
 

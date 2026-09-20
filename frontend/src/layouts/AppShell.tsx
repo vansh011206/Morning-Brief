@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Sun,
   Inbox,
   Archive,
   Link2,
@@ -187,8 +186,8 @@ export const AppShell: React.FC = () => {
         <div className="flex flex-col">
           <div className="flex items-center justify-between h-14 px-2">
             <NavLink to="/" className="flex items-center gap-3 group outline-none">
-              <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center text-amber-400 shrink-0 shadow-sm transition-transform duration-200 group-hover:scale-105">
-                <Sun className="w-5 h-5 text-amber-400" strokeWidth={1.75} />
+              <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/15 shrink-0 shadow-sm transition-transform duration-200 group-hover:scale-105">
+                <img src="/logo.png" alt="MorningBrief Logo" className="w-full h-full object-cover" />
               </div>
               <div className="flex flex-col">
                 <span className="font-display font-bold text-[16px] tracking-tight text-white leading-none">

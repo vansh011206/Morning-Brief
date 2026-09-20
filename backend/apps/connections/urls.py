@@ -10,6 +10,8 @@ from .views import (
     GmailCallbackView,
     GitHubAuthUrlView,
     GitHubCallbackView,
+    CalendarAuthUrlView,
+    CalendarCallbackView,
 )
 
 app_name = 'connections'
@@ -25,5 +27,7 @@ urlpatterns = [
     path('gmail/callback/', GmailCallbackView.as_view(), name='gmail_callback'),
     path('github/auth-url/', GitHubAuthUrlView.as_view(), name='github_auth_url'),
     path('github/callback/', GitHubCallbackView.as_view(), name='github_callback'),
+    path('calendar/auth-url/', CalendarAuthUrlView.as_view(), name='calendar_auth_url'),
+    path('calendar/callback/', CalendarCallbackView.as_view(), name='calendar_callback'),
 ]
 

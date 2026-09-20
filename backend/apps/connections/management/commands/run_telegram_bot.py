@@ -129,24 +129,66 @@ class Command(BaseCommand):
                 )
                 return
 
-            # Unbound user greeting
+            # Unbound user: send 2 separate messages (Greeting + Clear Instruction)
             TelegramService.send_message(
                 chat_id,
-                f"<b>Welcome to MorningBrief!</b>\n\n"
-                f"To link your account, either:\n"
-                f"1. Open your dashboard at <a href=\"http://localhost:5173/connections\">MorningBrief Connections</a> and click <b>Connect Bot</b>\n\n"
-                f"2. Or reply here directly with:\n"
-                f"<code>/link your-email@example.com</code>"
+                "🌅 <b>Welcome to MorningBrief Executive Intelligence!</b>\n\n"
+                "I deliver your curated morning briefings, critical emails, market moves, and daily schedule directly to Telegram every morning."
+            )
+            TelegramService.send_message(
+                chat_id,
+                "⚡ <b>Action Required: Link Your Account</b>\n\n"
+                "To connect this chat with your MorningBrief account, reply with:\n\n"
+                "<code>/link your_email@example.com</code>\n\n"
+                "<i>Example:</i>\n"
+                "<code>/link vanshaj.sharma@acem.edu.in</code>\n\n"
+                "💡 <i>(Tap the example command above to copy it, replace with your email, and send!)</i>\n\n"
+                "Or simply reply with your email address directly."
             )
             return
+
+        # Handle direct email input (e.g. user simply types their email address)
+        if '@' in text and not text.startswith('/'):
+            # Extract possible email
+            words = text.strip().split()
+            candidate_email = None
+            for w in words:
+                if '@' in w and '.' in w:
+                    candidate_email = w.strip('<>(),;:"\'').lower()
+                    break
+
+            if candidate_email:
+                target_user = User.objects.filter(email__iexact=candidate_email).first()
+                if target_user:
+                    TelegramService.bind_chat_to_user(target_user, chat_id)
+                    TelegramService.send_message(
+                        chat_id,
+                        f"✅ <b>MorningBrief Connected!</b>\n\n"
+                        f"Your Telegram account is now linked to <b>{target_user.email}</b>.\n\n"
+                        f"Commands you can use:\n"
+                        f"• /brief — Get today's morning briefing\n"
+                        f"• /status — Check connection & feed status\n"
+                        f"• /unlink — Unlink your Telegram account"
+                    )
+                    self.stdout.write(self.style.SUCCESS(f"Bound chat_id {chat_id} to user {target_user.email} via direct email"))
+                    return
+                else:
+                    TelegramService.send_message(
+                        chat_id,
+                        f"❌ <b>Account Not Found:</b> No MorningBrief account found with email <code>{candidate_email}</code>.\n\n"
+                        f"Please check for typos or register at http://localhost:5173/register\n\n"
+                        f"To link, reply with:\n<code>/link your_email@example.com</code>"
+                    )
+                    return
 
         # Handle /link <email>
         if cmd == '/link':
             if len(parts) < 2:
                 TelegramService.send_message(
                     chat_id,
-                    "<b>Usage:</b> <code>/link your-email@example.com</code>\n\n"
-                    "Please provide the email address of your MorningBrief account."
+                    "⚠️ <b>Usage:</b> <code>/link your-email@example.com</code>\n\n"
+                    "<i>Example:</i> <code>/link vanshaj.sharma@acem.edu.in</code>\n\n"
+                    "Please provide the email address registered with your MorningBrief account."
                 )
                 return
 
@@ -155,7 +197,7 @@ class Command(BaseCommand):
             if not target_user:
                 TelegramService.send_message(
                     chat_id,
-                    f"<b>User not found:</b> No MorningBrief account found with email <code>{target_email}</code>.\n\n"
+                    f"❌ <b>User Not Found:</b> No MorningBrief account found with email <code>{target_email}</code>.\n\n"
                     f"Please check the email or create an account at http://localhost:5173/register"
                 )
                 return
@@ -163,7 +205,7 @@ class Command(BaseCommand):
             TelegramService.bind_chat_to_user(target_user, chat_id)
             TelegramService.send_message(
                 chat_id,
-                f"<b>MorningBrief Connected!</b>\n\n"
+                f"✅ <b>MorningBrief Connected!</b>\n\n"
                 f"Your Telegram account is now linked to <b>{target_user.email}</b>.\n\n"
                 f"Commands:\n"
                 f"• /brief — Get today's morning briefing\n"

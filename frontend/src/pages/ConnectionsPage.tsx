@@ -776,52 +776,135 @@ export const ConnectionsPage: React.FC = () => {
             )
           })()}
 
-          {/* --- Google Calendar Card (Roadmap) --- */}
-          <div className="rounded-[20px] border border-zinc-200/80 bg-white shadow-xs flex flex-col justify-between overflow-hidden transition-all hover:shadow-md hover:-translate-y-[1px] duration-200 h-full">
-            <div className="p-5 pb-4 space-y-3.5">
-              {/* Header: Icon + Title */}
-              <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
-                  <Calendar className="w-6 h-6 text-amber-600" strokeWidth={1.75} />
+          {/* --- Google Calendar Card (Live OAuth) --- */}
+          {(() => {
+            const calConn = connections.find((c) => c.provider === 'calendar')
+            const isCalConnected = !!calConn
+
+            return (
+              <div className="rounded-[20px] border border-zinc-200/80 bg-white shadow-xs flex flex-col justify-between overflow-hidden transition-all hover:shadow-md hover:-translate-y-[1px] duration-200 h-full">
+                <div className="p-5 pb-4 space-y-3.5">
+                  {/* Header: Icon + Title */}
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
+                      <Calendar className="w-6 h-6 text-amber-600" strokeWidth={1.75} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-[15px] font-semibold text-zinc-900 truncate">Google Calendar</h3>
+                      <span className="text-xs font-mono text-zinc-400">OAuth 2.0</span>
+                    </div>
+                  </div>
+
+                  {/* Status row: Moved below title */}
+                  <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-zinc-50 border border-zinc-100">
+                    <span className="text-xs font-medium text-zinc-500">Service Status</span>
+                    {calConn ? (
+                      calConn.status === 'active' ? (
+                        <span className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide inline-flex items-center gap-1.5">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                          </span>
+                          Active · Connected
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide inline-flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                          Fetch Error
+                        </span>
+                      )
+                    ) : (
+                      <span className="rounded-full bg-zinc-100 text-zinc-500 border border-zinc-200 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
+                        Not Connected
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Content / Info Box */}
+                  <div className="space-y-3">
+                    {calConn && calConn.status === 'error' ? (
+                      <div className="flex items-start gap-2 text-xs text-rose-700 bg-rose-50 p-3 rounded-xl border border-rose-100">
+                        <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" strokeWidth={1.75} />
+                        <div className="min-w-0">
+                          <p className="font-semibold">Sync Error</p>
+                          <p className="text-[11px] text-rose-600 mt-0.5">
+                            {calConn.last_error || 'Failed to fetch calendar events.'}
+                          </p>
+                        </div>
+                      </div>
+                    ) : isCalConnected ? (
+                      <div className="flex items-start gap-2 text-xs text-emerald-800 bg-emerald-50/80 p-3 rounded-xl border border-emerald-100">
+                        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" strokeWidth={1.75} />
+                        <div className="min-w-0">
+                          <p className="font-semibold truncate">Connected: {calConn?.display_name || calConn?.external_account}</p>
+                          <p className="text-[11px] text-emerald-700 mt-0.5">
+                            Today's meetings and agenda synced into daily brief.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2 text-xs text-zinc-500 bg-zinc-50 p-3 rounded-xl border border-zinc-100">
+                        <ShieldCheck className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" strokeWidth={1.75} />
+                        <span className="leading-relaxed">Synthesizes upcoming meetings, agenda items, and schedule conflicts into your morning digest.</span>
+                      </div>
+                    )}
+
+                    {/* Privacy microcopy */}
+                    <p className="text-[12px] text-zinc-500 flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
+                      Read-only calendar access. Disconnect anytime.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-[15px] font-semibold text-zinc-900 truncate">Google Calendar</h3>
-                  <span className="text-xs font-mono text-zinc-400">Calendar API</span>
+
+                {/* Footer */}
+                <div className="py-3 px-5 bg-zinc-50/50 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-400">
+                  {isCalConnected ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setDeleteConfirmId(calConn!.id)}
+                      className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 text-xs"
+                    >
+                      <Unlink className="w-3.5 h-3.5 mr-1" strokeWidth={1.75} />
+                      Disconnect
+                    </Button>
+                  ) : (
+                    <span>OAuth 2.0</span>
+                  )}
+
+                  <Button
+                    size="sm"
+                    variant={isCalConnected ? 'outline' : 'primary'}
+                    className={isCalConnected ? 'h-9 rounded-xl' : 'h-9 rounded-xl shadow-indigo'}
+                    onClick={async () => {
+                      try {
+                        const data = await connectionsApi.getCalendarAuthUrl()
+                        const targetUrl = data?.url || data?.auth_url
+                        if (targetUrl) {
+                          window.location.href = targetUrl
+                        } else {
+                          addToast({
+                            type: 'error',
+                            title: 'OAuth Error',
+                            description: 'No authorization URL received from server.',
+                          })
+                        }
+                      } catch (err: any) {
+                        addToast({
+                          type: 'error',
+                          title: 'OAuth Error',
+                          description: err?.response?.data?.error || 'Failed to initiate Google Calendar login flow.',
+                        })
+                      }
+                    }}
+                  >
+                    {isCalConnected ? 'Reconnect Calendar' : 'Connect Calendar'}
+                  </Button>
                 </div>
               </div>
-
-              {/* Status row: Moved below title */}
-              <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-zinc-50 border border-zinc-100">
-                <span className="text-xs font-medium text-zinc-500">Service Status</span>
-                <span className="rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide inline-flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  Coming Soon
-                </span>
-              </div>
-
-              {/* Content / Info Box */}
-              <div className="space-y-3">
-                <div className="flex items-start gap-2 text-xs text-zinc-500 bg-zinc-50 p-3 rounded-xl border border-zinc-100">
-                  <ShieldCheck className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" strokeWidth={1.75} />
-                  <span className="leading-relaxed">Synthesizes upcoming meetings, agenda items, and schedule conflicts into your morning digest.</span>
-                </div>
-
-                {/* Privacy microcopy */}
-                <p className="text-[12px] text-zinc-500 flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-                  Roadmap feature. In active development.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="py-3 px-5 bg-zinc-50/50 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-400">
-              <span>Calendar API</span>
-              <Button size="sm" variant="ghost" className="h-9 rounded-xl">
-                Preview
-              </Button>
-            </div>
-          </div>
+            )
+          })()}
         </div>
       </div>
 

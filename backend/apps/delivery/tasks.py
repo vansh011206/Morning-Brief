@@ -99,7 +99,7 @@ def dispatch_scheduled_digests():
     users = User.objects.filter(
         is_active=True,
         profile__digest_enabled=True,
-        profile__delivery_channel__in=['email', 'both']
+        profile__delivery_channel__in=['email', 'telegram', 'both']
     ).select_related('profile')
 
     dispatched_users = []

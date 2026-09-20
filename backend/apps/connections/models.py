@@ -11,6 +11,7 @@ class Connection(models.Model):
         GITHUB = 'github', 'GitHub'
         GMAIL = 'gmail', 'Google Gmail'
         TELEGRAM = 'telegram', 'Telegram'
+        CALENDAR = 'calendar', 'Google Calendar'
 
     class Status(models.TextChoices):
         PENDING = 'pending', 'Pending'
