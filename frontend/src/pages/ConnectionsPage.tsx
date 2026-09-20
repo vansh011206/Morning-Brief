@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Rss,
@@ -174,7 +174,13 @@ export const ConnectionsPage: React.FC = () => {
     },
   })
 
-  const rssConnections = connections.filter((c) => c.provider === 'rss')
+  const safeConnections: Connection[] = useMemo(() => {
+    if (Array.isArray(connections)) return connections
+    if (Array.isArray((connections as any)?.results)) return (connections as any).results
+    return []
+  }, [connections])
+
+  const rssConnections = safeConnections.filter((c) => c.provider === 'rss')
 
   const handleAddFeedSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -428,7 +434,7 @@ export const ConnectionsPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* --- GitHub Card (Live OAuth) --- */}
           {(() => {
-            const githubConn = connections.find((c) => c.provider === 'github')
+            const githubConn = safeConnections.find((c) => c.provider === 'github')
             const isGithubConnected = !!githubConn
             const isGithubSyncing = githubConn ? syncingId === githubConn.id : false
             const isGithubError = githubConn?.status === 'error'
@@ -583,7 +589,7 @@ export const ConnectionsPage: React.FC = () => {
 
           {/* --- Gmail Card (Live OAuth) --- */}
           {(() => {
-            const gmailConn = connections.find((c) => c.provider === 'gmail')
+            const gmailConn = safeConnections.find((c) => c.provider === 'gmail')
             const isGmailConnected = !!gmailConn
 
             return (
@@ -778,7 +784,7 @@ export const ConnectionsPage: React.FC = () => {
 
           {/* --- Google Calendar Card (Live OAuth) --- */}
           {(() => {
-            const calConn = connections.find((c) => c.provider === 'calendar')
+            const calConn = safeConnections.find((c) => c.provider === 'calendar')
             const isCalConnected = !!calConn
 
             return (

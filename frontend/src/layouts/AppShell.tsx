@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -156,16 +156,22 @@ export const AppShell: React.FC = () => {
     return () => clearInterval(timer)
   }, [user?.profile?.digest_time])
 
+  const safeConnections: Connection[] = useMemo(() => {
+    if (Array.isArray(connections)) return connections
+    if (Array.isArray((connections as any)?.results)) return (connections as any).results
+    return []
+  }, [connections])
+
   const navItems = [
     { to: '/today', label: 'Today', icon: <Inbox className="w-[18px] h-[18px]" strokeWidth={1.75} />, count: digest?.item_count },
     { to: '/archive', label: 'Archive', icon: <Archive className="w-[18px] h-[18px]" strokeWidth={1.75} /> },
-    { to: '/connections', label: 'Connections', icon: <Link2 className="w-[18px] h-[18px]" strokeWidth={1.75} />, count: connections.filter(c => c.is_active).length },
+    { to: '/connections', label: 'Connections', icon: <Link2 className="w-[18px] h-[18px]" strokeWidth={1.75} />, count: safeConnections.filter(c => c.is_active).length },
     { to: '/settings', label: 'Settings', icon: <Settings className="w-[18px] h-[18px]" strokeWidth={1.75} /> },
   ]
 
   const firstName = user?.first_name || user?.name?.split(' ')[0] || 'Vanshaj'
   const isDelivered = digest?.status === 'delivered' || !!digest?.delivered_at
-  const hasItems = digest && digest.items && digest.items.length > 0
+  const hasItems = digest && digest.items && Array.isArray(digest.items) && digest.items.length > 0
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F8F7F4] text-zinc-900 selection:bg-zinc-900 selection:text-white relative">
@@ -174,11 +180,11 @@ export const AppShell: React.FC = () => {
       <div className="mesh-blob-amber" aria-hidden="true" />
 
       {/* ========================================================= */}
-      {/* 1. LEFT SIDEBAR (280px, Dark #0F0F0F, Linear/Notion style) */}
+      {/* 1. LEFT SIDEBAR (260px-280px, Dark #0F0F0F, Linear/Notion style) */}
       {/* ========================================================= */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 w-[280px] h-screen bg-[#0F0F0F] text-white border-r border-zinc-800 flex flex-col justify-between p-4 transition-transform duration-300 select-none lg:static lg:translate-x-0 shrink-0 shadow-2xl lg:shadow-none',
+          'fixed inset-y-0 left-0 z-40 w-[260px] 2xl:w-[280px] h-screen bg-[#0F0F0F] text-white border-r border-zinc-800 flex flex-col justify-between p-4 transition-transform duration-300 select-none lg:static lg:translate-x-0 shrink-0 shadow-2xl lg:shadow-none',
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
@@ -412,10 +418,10 @@ export const AppShell: React.FC = () => {
               <span>{hasItems ? 'Re-rank Briefing' : 'Generate Briefing'}</span>
             </button>
 
-            {/* Right Panel Toggle (for screens < 1280px) */}
+            {/* Right Panel Toggle (for screens < 1536px) */}
             <button
               onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
-              className="xl:hidden p-2 rounded-xl text-zinc-600 hover:bg-zinc-100 transition-colors ml-1"
+              className="2xl:hidden p-2 rounded-xl text-zinc-600 hover:bg-zinc-100 transition-colors ml-1"
               aria-label="Toggle intelligence panel"
               title="Toggle intelligence panel"
             >
@@ -425,29 +431,37 @@ export const AppShell: React.FC = () => {
         </header>
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 p-6 lg:p-10 max-w-[1000px] w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 2xl:p-10 max-w-[1200px] w-full mx-auto">
           <Outlet />
         </main>
       </div>
+
+      {/* Right Panel Backdrop on < 2xl screens */}
+      {isRightPanelOpen && (
+        <div
+          className="fixed inset-0 z-25 bg-zinc-950/40 backdrop-blur-xs 2xl:hidden"
+          onClick={() => setIsRightPanelOpen(false)}
+        />
+      )}
 
       {/* ========================================================= */}
       {/* 3. RIGHT CONTEXT INTELLIGENCE PANEL (360px, Fills Right)   */}
       {/* ========================================================= */}
       <aside
         className={cn(
-          'w-[360px] h-screen bg-white border-l border-zinc-200/80 overflow-y-auto flex flex-col p-6 space-y-6 shrink-0 z-30 transition-transform duration-300 select-none shadow-2xl xl:shadow-none',
-          'fixed inset-y-0 right-0 xl:static xl:translate-x-0',
-          isRightPanelOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'
+          'w-[340px] 2xl:w-[360px] h-screen bg-white border-l border-zinc-200/80 overflow-y-auto flex flex-col p-5 2xl:p-6 space-y-6 shrink-0 z-30 transition-transform duration-300 select-none shadow-2xl 2xl:shadow-none',
+          'fixed inset-y-0 right-0 2xl:static 2xl:translate-x-0',
+          isRightPanelOpen ? 'translate-x-0' : 'translate-x-full 2xl:translate-x-0'
         )}
       >
-        {/* Right Panel Header on Mobile */}
-        <div className="flex items-center justify-between xl:hidden pb-2 border-b border-zinc-100">
+        {/* Right Panel Header on < 2xl screens */}
+        <div className="flex items-center justify-between 2xl:hidden pb-2 border-b border-zinc-100">
           <span className="font-display font-bold text-base text-zinc-900">
             Intelligence Panel
           </span>
           <button
             onClick={() => setIsRightPanelOpen(false)}
-            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100"
           >
             <X className="w-5 h-5" />
           </button>

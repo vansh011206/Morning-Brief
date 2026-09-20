@@ -42,7 +42,11 @@ export const ArchivePage: React.FC = () => {
     queryFn: () => digestApi.getDigests(currentPage),
   })
 
-  const digests = paginatedData?.results || []
+  const digests: Digest[] = Array.isArray(paginatedData?.results)
+    ? paginatedData.results
+    : Array.isArray(paginatedData)
+    ? paginatedData
+    : []
   const totalCount = paginatedData?.count || 0
   const pageSize = 10
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))

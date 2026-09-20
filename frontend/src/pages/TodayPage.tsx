@@ -106,20 +106,27 @@ export const TodayPage: React.FC = () => {
     },
   })
 
+  // Safely normalize rawItems to prevent D.filter is not a function errors
+  const safeRawItems: RawItem[] = useMemo(() => {
+    if (Array.isArray(rawItems)) return rawItems
+    if (Array.isArray((rawItems as any)?.results)) return (rawItems as any).results
+    return []
+  }, [rawItems])
+
   // Pipeline category counts & tabs
   const categoryCounts = useMemo(() => {
     return {
-      all: rawItems.length,
-      news: rawItems.filter((i) => i.type === 'news').length,
-      email: rawItems.filter((i) => i.type === 'email').length,
-      pr: rawItems.filter((i) => i.type === 'pr').length,
-      bill: rawItems.filter((i) => i.type === 'bill').length,
-      event: rawItems.filter((i) => i.type === 'event').length,
-      other: rawItems.filter(
+      all: safeRawItems.length,
+      news: safeRawItems.filter((i) => i.type === 'news').length,
+      email: safeRawItems.filter((i) => i.type === 'email').length,
+      pr: safeRawItems.filter((i) => i.type === 'pr').length,
+      bill: safeRawItems.filter((i) => i.type === 'bill').length,
+      event: safeRawItems.filter((i) => i.type === 'event').length,
+      other: safeRawItems.filter(
         (i) => !['news', 'email', 'pr', 'bill', 'event'].includes(i.type)
       ).length,
     }
-  }, [rawItems])
+  }, [safeRawItems])
 
   const pipelineTabs = useMemo(() => {
     const tabs: { id: PipelineCategory; label: string; count: number; icon: React.ReactNode }[] = [
@@ -143,18 +150,18 @@ export const TodayPage: React.FC = () => {
   }, [categoryCounts])
 
   const filteredRawItems = useMemo(() => {
-    if (pipelineCategory === 'all') return rawItems
+    if (pipelineCategory === 'all') return safeRawItems
     if (pipelineCategory === 'other') {
-      return rawItems.filter(
+      return safeRawItems.filter(
         (i) => !['news', 'email', 'pr', 'bill', 'event'].includes(i.type)
       )
     }
-    return rawItems.filter((i) => i.type === pipelineCategory)
-  }, [rawItems, pipelineCategory])
+    return safeRawItems.filter((i) => i.type === pipelineCategory)
+  }, [safeRawItems, pipelineCategory])
 
   const todayFormatted = format(new Date(), 'EEEE, d MMMM')
   const firstName = user?.first_name || user?.name?.split(' ')[0] || 'Vanshaj'
-  const hasItems = digest && digest.items && digest.items.length > 0
+  const hasItems = digest && digest.items && Array.isArray(digest.items) && digest.items.length > 0
   const sectionsList = digest?.sections ? Object.values(digest.sections) : []
   const isDelivered = digest?.status === 'delivered' || !!digest?.delivered_at
 
@@ -275,14 +282,14 @@ export const TodayPage: React.FC = () => {
             )}
           >
             <span>Live Raw Feed Pipeline</span>
-            {rawItems.length > 0 && (
+            {safeRawItems.length > 0 && (
               <span
                 className={cn(
                   'ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold tabular-nums',
                   viewMode === 'raw' ? 'bg-zinc-900 text-white' : 'bg-white/10 text-white'
                 )}
               >
-                {rawItems.length}
+                {safeRawItems.length}
               </span>
             )}
           </button>

@@ -32,8 +32,14 @@ export interface TelegramTokenResponse {
 
 export const connectionsApi = {
   getConnections: async (): Promise<Connection[]> => {
-    const res = await apiClient.get<Connection[]>('/connections/')
-    return res.data
+    try {
+      const res = await apiClient.get<any>('/connections/')
+      if (Array.isArray(res.data)) return res.data
+      if (Array.isArray(res.data?.results)) return res.data.results
+      return []
+    } catch {
+      return []
+    }
   },
 
   createConnection: async (payload: CreateConnectionPayload): Promise<Connection> => {

@@ -8,9 +8,15 @@ export interface GetRawItemsParams {
 
 export const ingestorApi = {
   getRawItems: async (params?: GetRawItemsParams): Promise<RawItem[]> => {
-    const res = await apiClient.get<RawItem[]>('/ingestor/raw-items/', {
-      params,
-    })
-    return res.data
+    try {
+      const res = await apiClient.get<any>('/ingestor/raw-items/', {
+        params,
+      })
+      if (Array.isArray(res.data)) return res.data
+      if (Array.isArray(res.data?.results)) return res.data.results
+      return []
+    } catch {
+      return []
+    }
   },
 }
