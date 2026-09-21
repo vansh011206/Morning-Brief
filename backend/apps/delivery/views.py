@@ -1,4 +1,5 @@
 import pytz
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import serializers, generics, permissions, status
 from rest_framework.views import APIView
@@ -88,5 +89,88 @@ class SendTestBriefView(APIView):
             "message": f"Test brief sent via {', '.join(channels_sent)} to {user.email}",
             "delivered_at": digest.delivered_at.isoformat(),
             "results": results,
+        }, status=status.HTTP_200_OK)
+
+
+class CronDispatchView(APIView):
+    """
+    GET /api/v1/delivery/cron-dispatch/
+    POST /api/v1/delivery/cron-dispatch/
+
+    Automated Keep-Alive & Task Dispatcher endpoint designed for Render Free Tier.
+    1. Keeps Render web service awake 24/7 (resets the 15-minute inactivity spin-down timer).
+    2. Runs scheduled digest checks to deliver briefings on time via Email & Telegram.
+    3. Triggers RSS feed ingestion to keep raw items fresh.
+    """
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request):
+        return self._handle_dispatch(request)
+
+    def post(self, request):
+        return self._handle_dispatch(request)
+
+    def _handle_dispatch(self, request):
+        now_ts = timezone.now().isoformat()
+        cron_secret = getattr(settings, 'CRON_SECRET', 'morningbrief_cron_2025')
+
+        # Check query param, header, or body key
+        provided_key = (
+            request.query_params.get('key')
+            or request.headers.get('X-Cron-Key')
+            or (request.data.get('key') if isinstance(getattr(request, 'data', None), dict) else None)
+        )
+
+        is_authorized = (
+            request.user.is_authenticated
+            or (provided_key and provided_key in [cron_secret, getattr(settings, 'SECRET_KEY', None)])
+        )
+
+        # Unauthenticated / unkeyed ping:
+        # Return 200 OK immediately. This resets Render's 15-minute sleep timer
+        # keeping the container active without executing heavy LLM/delivery tasks.
+        if not is_authorized:
+            return Response({
+                "status": "awake",
+                "service": "MorningBrief API",
+                "timestamp": now_ts,
+                "keep_alive": "warm",
+                "message": "Render keep-alive ping acknowledged. Backend is warm and active.",
+            }, status=status.HTTP_200_OK)
+
+        # Authorized cron trigger: Execute RSS ingestion and scheduled digest delivery
+        from apps.ingestor.tasks import fetch_all_active_rss_feeds
+        from .tasks import dispatch_scheduled_digests
+
+        fetch_rss = request.query_params.get('rss', 'true').lower() in ['true', '1', 'yes']
+        rss_result = {}
+        if fetch_rss:
+            try:
+                rss_result = fetch_all_active_rss_feeds()
+            except Exception as e:
+                rss_result = {"status": "error", "error": str(e)}
+
+        force_user_id = request.query_params.get('force_user_id')
+        try:
+            window_minutes = int(request.query_params.get('window', 60))
+        except (ValueError, TypeError):
+            window_minutes = 60
+
+        dispatch_result = {}
+        try:
+            dispatch_result = dispatch_scheduled_digests(
+                force_user_id=int(force_user_id) if force_user_id else None,
+                window_minutes=window_minutes
+            )
+        except Exception as e:
+            dispatch_result = {"status": "error", "error": str(e)}
+
+        return Response({
+            "status": "dispatched",
+            "service": "MorningBrief API",
+            "timestamp": now_ts,
+            "keep_alive": "warm",
+            "rss_ingestion": rss_result,
+            "scheduled_delivery": dispatch_result,
         }, status=status.HTTP_200_OK)
 

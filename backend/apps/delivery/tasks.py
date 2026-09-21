@@ -86,22 +86,26 @@ def deliver_digest(self, digest_arg):
 
 
 @shared_task(name='apps.delivery.tasks.dispatch_scheduled_digests')
-def dispatch_scheduled_digests():
+def dispatch_scheduled_digests(force_user_id=None, window_minutes=60):
     """
-    Master Celery Beat task executed every 5 minutes.
-    Queries active users where local time (tz) matches digest_time and
-    digest not yet created/delivered today, then fans out tasks:
+    Periodic task executed every 5-10 minutes (via cron/celery-beat).
+    Queries active users where local time matches digest_time within window_minutes,
+    and digest not yet delivered/building today, then fans out tasks:
     build_digest then deliver_digest in a Celery chain.
     """
     now_utc = timezone.now()
-    logger.info(f"[Scheduler] 5-minute digest dispatcher checking active users at {now_utc.strftime('%H:%M UTC')}")
+    logger.info(f"[Scheduler] Digest dispatcher checking active users at {now_utc.strftime('%H:%M UTC')}")
 
-    users = User.objects.filter(
+    users_query = User.objects.filter(
         is_active=True,
         profile__digest_enabled=True,
         profile__delivery_channel__in=['email', 'telegram', 'both']
     ).select_related('profile')
 
+    if force_user_id:
+        users_query = users_query.filter(id=force_user_id)
+
+    users = list(users_query)
     dispatched_users = []
     from apps.digest.tasks import build_digest
 
@@ -134,21 +138,21 @@ def dispatch_scheduled_digests():
         target_total_min = target_hour * 60 + target_minute
         diff = curr_total_min - target_total_min
 
-        # Match 5-minute window [0, 5)
-        if not (0 <= diff < 5):
+        # If not forcing, check time window [0, window_minutes)
+        if not force_user_id and not (0 <= diff < window_minutes):
             continue
 
         user_today = user_now.date()
 
-        # Check if digest was already delivered today
-        already_delivered = Digest.objects.filter(
+        # Check if digest was already delivered or is currently building today
+        already_handled = Digest.objects.filter(
             user=user,
             digest_date=user_today,
-            status=Digest.Status.DELIVERED
+            status__in=[Digest.Status.DELIVERED, Digest.Status.BUILDING]
         ).exists()
 
-        if already_delivered:
-            logger.debug(f"[Scheduler] Digest already delivered for {user.email} on {user_today}. Skipping.")
+        if already_handled and not force_user_id:
+            logger.debug(f"[Scheduler] Digest already handled for {user.email} on {user_today}. Skipping.")
             continue
 
         logger.info(

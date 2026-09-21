@@ -223,6 +223,9 @@ RESEND_API_KEY = env('RESEND_API_KEY', default='')
 # Frontend URL for links in emails
 FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')
 
+# Cron & Keep-Alive Dispatcher Secret
+CRON_SECRET = env('CRON_SECRET', default='morningbrief_cron_2025')
+
 # Cryptographic Encryption Key for storing sensitive tokens (Fernet)
 # Key can be any 32-byte urlsafe base64 string or passphrase (derived via SHA-256)
 ENCRYPTION_KEY = env('ENCRYPTION_KEY', default=env('FERNET_KEY', default=SECRET_KEY))

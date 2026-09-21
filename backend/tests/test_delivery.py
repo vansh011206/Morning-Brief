@@ -99,3 +99,25 @@ class TestDelivery:
                 assert kwargs.get('countdown') == 120
         finally:
             deliver_digest.pop_request()
+
+    def test_cron_dispatch_keepalive_unkeyed(self, api_client):
+        """Unkeyed GET/POST to cron-dispatch returns 200 OK to keep Render awake without executing tasks."""
+        url = '/api/v1/delivery/cron-dispatch/'
+        response = api_client.get(url)
+        assert response.status_code == 200
+        assert response.data.get('status') == 'awake'
+        assert response.data.get('keep_alive') == 'warm'
+
+    def test_cron_dispatch_authorized_triggers_tasks(self, api_client):
+        """Keyed GET to cron-dispatch runs RSS fetch and scheduled digest dispatch."""
+        with patch('apps.ingestor.tasks.fetch_all_active_rss_feeds') as mock_rss, \
+             patch('apps.delivery.tasks.dispatch_scheduled_digests') as mock_dispatch:
+            mock_rss.return_value = {'status': 'dispatched', 'count': 1}
+            mock_dispatch.return_value = {'status': 'complete', 'dispatched_count': 1, 'recipients': ['test@example.com']}
+
+            url = '/api/v1/delivery/cron-dispatch/?key=morningbrief_cron_2025'
+            response = api_client.get(url)
+            assert response.status_code == 200
+            assert response.data.get('status') == 'dispatched'
+            assert mock_rss.called
+            assert mock_dispatch.called

@@ -1,0 +1,25 @@
+name: Render Backend Keep-Alive & Task Dispatcher
+
+on:
+  schedule:
+    # Run every 10 minutes (keeps Render 15-minute inactivity timer warm 24/7)
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    name: Keep Render Backend Active
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Keep-Alive & Trigger Scheduled Tasks
+        run: |
+          echo "Pinging MorningBrief Render backend..."
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -m 60 "https://morning-brief-1t5b.onrender.com/api/v1/delivery/cron-dispatch/?key=morningbrief_cron_2025" || true)
+          echo "$RESPONSE"
+          STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d':' -f2)
+          if [ "$STATUS" -eq "200" ]; then
+            echo "Success: Render backend is warm and tasks dispatched."
+          else
+            echo "Warning: Response code $STATUS. Retrying with health endpoint..."
+            curl -s -f -m 60 "https://morning-brief-1t5b.onrender.com/api/v1/health/" || true
+          fi
