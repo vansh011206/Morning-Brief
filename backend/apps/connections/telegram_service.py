@@ -200,36 +200,249 @@ class TelegramService:
         return full_text, reply_markup
 
     @classmethod
+    def set_webhook(cls, webhook_url: Optional[str] = None) -> Tuple[bool, str]:
+        """Registers the Telegram Bot webhook with Telegram Bot API."""
+        bot_token = cls.get_bot_token()
+        if not bot_token or bot_token.startswith('mock-'):
+            return False, "No valid bot token configured"
+
+        if not webhook_url:
+            base_url = "https://morning-brief-1t5b.onrender.com"
+            for host in getattr(settings, 'ALLOWED_HOSTS', []):
+                if 'onrender.com' in host and not host.startswith('.'):
+                    base_url = f"https://{host}"
+                    break
+            webhook_url = f"{base_url.rstrip('/')}/api/v1/connections/telegram/webhook/"
+
+        url = f"https://api.telegram.org/bot{bot_token}/setWebhook"
+        try:
+            resp = requests.post(url, json={'url': webhook_url}, timeout=10)
+            data = resp.json()
+            if data.get('ok'):
+                logger.info(f"[TelegramService] Webhook successfully set to {webhook_url}")
+                return True, webhook_url
+            return False, data.get('description', 'Failed to set webhook')
+        except Exception as e:
+            return False, str(e)
+
+    @classmethod
     def handle_webhook_update(cls, update_data: Dict[str, Any]) -> Dict[str, Any]:
         """Handles incoming webhook updates from Telegram Bot API."""
-        # 1. Handle Message updates (/start <token>)
+        # 1. Handle Message updates
         message = update_data.get('message', {})
         text = message.get('text', '').strip()
         chat = message.get('chat', {})
         chat_id = str(chat.get('id', ''))
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'https://morning-brief-sepia.vercel.app').rstrip('/')
 
-        if text.startswith('/start') and chat_id:
+        if chat_id and text:
             parts = text.split()
-            if len(parts) > 1:
-                token = parts[1]
-                user_id = verify_telegram_bind_token(token)
-                if user_id:
-                    try:
-                        user = User.objects.get(pk=user_id)
-                        cls.bind_chat_to_user(user, chat_id)
+            cmd = parts[0].lower() if parts else ''
+
+            # Handle /start
+            if cmd == '/start':
+                if len(parts) > 1:
+                    token = parts[1]
+                    user_id = verify_telegram_bind_token(token)
+                    if user_id:
+                        try:
+                            user = User.objects.get(pk=user_id)
+                            cls.bind_chat_to_user(user, chat_id)
+                            cls.send_message(
+                                chat_id,
+                                f"<b>MorningBrief Connected!</b>\n\n"
+                                f"Your Telegram account is now linked to <b>{user.email}</b>.\n\n"
+                                f"Commands:\n"
+                                f"• /brief — Get today's morning briefing\n"
+                                f"• /status — Check connection & feed status\n"
+                                f"• /unlink — Unlink your Telegram account\n\n"
+                                f"You will automatically receive your daily briefings here at your scheduled digest time."
+                            )
+                            return {'status': 'bound', 'user_id': user_id, 'chat_id': chat_id}
+                        except User.DoesNotExist:
+                            pass
+
+                # If /start without token, check if user is already bound
+                existing_user = User.objects.filter(profile__telegram_chat_id=chat_id).first()
+                if existing_user:
+                    cls.send_message(
+                        chat_id,
+                        f"<b>Welcome back!</b>\n\n"
+                        f"Your account is linked to <b>{existing_user.email}</b>.\n\n"
+                        f"Commands:\n"
+                        f"• /brief — Get today's morning briefing\n"
+                        f"• /status — Check connection & feed status\n"
+                        f"• /unlink — Unlink this Telegram account"
+                    )
+                    return {'status': 'welcome_back', 'user_id': existing_user.id, 'chat_id': chat_id}
+
+                # Unbound user
+                cls.send_message(
+                    chat_id,
+                    f"<b>Welcome to MorningBrief Executive Intelligence!</b>\n\n"
+                    f"I deliver your curated morning briefings, critical emails, and daily schedule directly to Telegram.\n\n"
+                    f"<b>To link your account:</b>\n"
+                    f"1. Open your dashboard at {frontend_url}/connections and click <b>Connect Telegram</b>\n\n"
+                    f"OR reply here with:\n"
+                    f"<code>/link your-email@example.com</code>\n\n"
+                    f"Or simply reply with your email address directly."
+                )
+                return {'status': 'welcomed', 'chat_id': chat_id}
+
+            # Handle direct email reply
+            if '@' in text and not text.startswith('/'):
+                words = text.strip().split()
+                candidate_email = None
+                for w in words:
+                    if '@' in w and '.' in w:
+                        candidate_email = w.strip('<>(),;:"\'').lower()
+                        break
+
+                if candidate_email:
+                    target_user = User.objects.filter(email__iexact=candidate_email).first()
+                    if target_user:
+                        cls.bind_chat_to_user(target_user, chat_id)
                         cls.send_message(
                             chat_id,
-                            f"<b>MorningBrief Connected!</b>\n\nYour Telegram account is now linked to <b>{user.email}</b>. You will receive your daily briefings here at your scheduled digest time."
+                            f"<b>MorningBrief Connected!</b>\n\n"
+                            f"Your Telegram account is now linked to <b>{target_user.email}</b>.\n\n"
+                            f"Commands:\n"
+                            f"• /brief — Get today's morning briefing\n"
+                            f"• /status — Check connection & feed status\n"
+                            f"• /unlink — Unlink your Telegram account"
                         )
-                        return {'status': 'bound', 'user_id': user_id, 'chat_id': chat_id}
-                    except User.DoesNotExist:
-                        pass
+                        return {'status': 'bound', 'user_id': target_user.id, 'chat_id': chat_id}
+                    else:
+                        cls.send_message(
+                            chat_id,
+                            f"<b>Account Not Found:</b> No MorningBrief account found with email <code>{candidate_email}</code>.\n\n"
+                            f"Please check for typos or register at {frontend_url}/register\n\n"
+                            f"To link, reply with:\n<code>/link your-email@example.com</code>"
+                        )
+                        return {'status': 'user_not_found', 'chat_id': chat_id}
 
+            # Handle /link <email>
+            if cmd == '/link':
+                if len(parts) < 2:
+                    cls.send_message(
+                        chat_id,
+                        "<b>Usage:</b> <code>/link your-email@example.com</code>\n\n"
+                        "Please provide the email address registered with your MorningBrief account."
+                    )
+                    return {'status': 'link_usage_sent', 'chat_id': chat_id}
+
+                target_email = parts[1].strip().lower()
+                target_user = User.objects.filter(email__iexact=target_email).first()
+                if not target_user:
+                    cls.send_message(
+                        chat_id,
+                        f"<b>Account Not Found:</b> No MorningBrief account found with email <code>{target_email}</code>.\n\n"
+                        f"Please check your email or register at {frontend_url}/register"
+                    )
+                    return {'status': 'user_not_found', 'chat_id': chat_id}
+
+                cls.bind_chat_to_user(target_user, chat_id)
+                cls.send_message(
+                    chat_id,
+                    f"<b>MorningBrief Connected!</b>\n\n"
+                    f"Your Telegram account is now linked to <b>{target_user.email}</b>.\n\n"
+                    f"Commands:\n"
+                    f"• /brief — Get today's morning briefing\n"
+                    f"• /status — Check connection & feed status\n"
+                    f"• /unlink — Unlink your Telegram account"
+                )
+                return {'status': 'bound', 'user_id': target_user.id, 'chat_id': chat_id}
+
+            # Handle /brief
+            if cmd == '/brief':
+                user = User.objects.filter(profile__telegram_chat_id=chat_id).first()
+                if not user:
+                    cls.send_message(
+                        chat_id,
+                        "<b>Account Not Linked</b>\n\nPlease link your account first by sending:\n"
+                        "<code>/link your-email@example.com</code>"
+                    )
+                    return {'status': 'not_linked', 'chat_id': chat_id}
+
+                cls.send_message(chat_id, "Compiling your morning briefing...")
+                import pytz
+                from apps.digest.models import Digest
+                from apps.digest.tasks import build_digest
+                from apps.delivery.services import DeliveryService
+
+                tz_name = getattr(user.profile, 'timezone', 'Asia/Kolkata')
+                try:
+                    user_tz = pytz.timezone(tz_name)
+                except Exception:
+                    user_tz = pytz.timezone('Asia/Kolkata')
+
+                user_today = timezone.now().astimezone(user_tz).date()
+                digest = Digest.objects.filter(user=user, digest_date=user_today).first()
+                if not digest or digest.items.count() == 0:
+                    build_digest(user.id, user_today.isoformat())
+                    digest = Digest.objects.filter(user=user, digest_date=user_today).first()
+
+                if not digest or digest.items.count() == 0:
+                    cls.send_message(
+                        chat_id,
+                        "<b>No items found for today.</b>\n\n"
+                        "Make sure you have active RSS feeds or connections in your dashboard."
+                    )
+                    return {'status': 'no_items', 'chat_id': chat_id}
+
+                success, res = DeliveryService.send_digest_telegram(digest, chat_id=chat_id)
+                return {'status': 'brief_sent' if success else 'brief_failed', 'chat_id': chat_id, 'result': res}
+
+            # Handle /status
+            if cmd == '/status':
+                user = User.objects.filter(profile__telegram_chat_id=chat_id).first()
+                if not user:
+                    cls.send_message(
+                        chat_id,
+                        "Status: <b>Not Linked</b>\n\nLink your account with <code>/link your-email@example.com</code>"
+                    )
+                    return {'status': 'not_linked', 'chat_id': chat_id}
+
+                conns = Connection.objects.filter(user=user, is_active=True)
+                conn_list = "\n".join([f"• {c.display_name} ({c.provider})" for c in conns]) or "None active"
+
+                cls.send_message(
+                    chat_id,
+                    f"<b>MorningBrief Status</b>\n\n"
+                    f"Linked User: <b>{user.email}</b>\n"
+                    f"Timezone: <code>{getattr(user.profile, 'timezone', 'Asia/Kolkata')}</code>\n"
+                    f"Delivery Time: <code>{getattr(user.profile, 'digest_time', '07:00')}</code>\n\n"
+                    f"<b>Active Feeds:</b>\n{conn_list}\n\n"
+                    f"Send /brief to fetch today's briefing."
+                )
+                return {'status': 'status_sent', 'chat_id': chat_id}
+
+            # Handle /unlink
+            if cmd == '/unlink':
+                user = User.objects.filter(profile__telegram_chat_id=chat_id).first()
+                if user:
+                    user.profile.telegram_chat_id = None
+                    user.profile.save(update_fields=['telegram_chat_id'])
+                    Connection.objects.filter(user=user, provider=Connection.Provider.TELEGRAM).delete()
+                    cls.send_message(
+                        chat_id,
+                        "<b>Disconnected</b>\n\nYour Telegram account has been unlinked from MorningBrief."
+                    )
+                    return {'status': 'unlinked', 'chat_id': chat_id}
+                else:
+                    cls.send_message(chat_id, "This chat is not currently linked to any account.")
+                    return {'status': 'already_unlinked', 'chat_id': chat_id}
+
+            # Default fallback for unrecognized messages
             cls.send_message(
                 chat_id,
-                "<b>Welcome to MorningBrief</b>\n\nTo link your account, visit your MorningBrief web dashboard and click 'Connect Telegram'."
+                "<b>MorningBrief Bot Commands:</b>\n\n"
+                "• /brief — Fetch today's morning briefing\n"
+                "• /status — Check connection status\n"
+                "• /link &lt;email&gt; — Link your MorningBrief account\n"
+                "• /unlink — Unlink this Telegram chat"
             )
-            return {'status': 'welcomed', 'chat_id': chat_id}
+            return {'status': 'fallback_sent', 'chat_id': chat_id}
 
         # 2. Handle Callback queries (interactive ratings)
         callback_query = update_data.get('callback_query', {})

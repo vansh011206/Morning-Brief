@@ -125,6 +125,12 @@ class TelegramTokenView(APIView):
 
         chat_id = tg_conn.external_account if tg_conn else getattr(request.user.profile, 'telegram_chat_id', None)
 
+        # Ensure webhook is registered
+        try:
+            TelegramService.set_webhook()
+        except Exception:
+            pass
+
         return Response({
             "token": token,
             "bot_username": bot_username,
@@ -196,6 +202,29 @@ class TelegramWebhookView(APIView):
         update_data = request.data
         result = TelegramService.handle_webhook_update(update_data)
         return Response({"ok": True, "result": result}, status=status.HTTP_200_OK)
+
+
+class TelegramSetWebhookView(APIView):
+    """
+    GET /api/v1/connections/telegram/set-webhook/
+    POST /api/v1/connections/telegram/set-webhook/
+    Ensures the Telegram webhook is correctly registered with Telegram Bot API.
+    """
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request):
+        return self._register(request)
+
+    def post(self, request):
+        return self._register(request)
+
+    def _register(self, request):
+        from .telegram_service import TelegramService
+        custom_url = request.query_params.get('url') or (request.data.get('url') if isinstance(getattr(request, 'data', None), dict) else None)
+        success, res = TelegramService.set_webhook(custom_url)
+        if success:
+            return Response({"ok": True, "message": "Webhook set successfully", "url": res}, status=status.HTTP_200_OK)
+        return Response({"ok": False, "error": res}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class GmailAuthUrlView(APIView):
