@@ -646,13 +646,46 @@ export const ConnectionsPage: React.FC = () => {
                   {/* Content / Info Box */}
                   <div className="space-y-3">
                     {gmailConn && gmailConn.status === 'error' ? (
-                      <div className="flex items-start gap-2 text-xs text-rose-700 bg-rose-50 p-3 rounded-xl border border-rose-100">
-                        <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" strokeWidth={1.75} />
-                        <div className="min-w-0">
-                          <p className="font-semibold">Insufficient Permissions</p>
-                          <p className="text-[11px] text-rose-600 mt-0.5">
-                            {gmailConn.last_error || 'Gmail scope missing. Please disconnect and reconnect.'}
-                          </p>
+                      <div className="flex flex-col gap-2.5 text-xs text-rose-700 bg-rose-50 p-3.5 rounded-xl border border-rose-100">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" strokeWidth={1.75} />
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-rose-900">
+                              {gmailConn.last_error?.includes('Insufficient') || gmailConn.last_error?.includes('403') || gmailConn.last_error?.includes('SCOPE_INSUFFICIENT')
+                                ? 'Permission Not Granted'
+                                : 'Sync Error'}
+                            </p>
+                            <p className="text-[11.5px] text-rose-600 mt-0.5 leading-relaxed">
+                              {gmailConn.last_error?.includes('Insufficient') || gmailConn.last_error?.includes('403') || gmailConn.last_error?.includes('SCOPE_INSUFFICIENT')
+                                ? "When connecting Google, the 'Read all your email messages in Gmail' checkbox was left unchecked. Please click Reconnect and make sure to check all permission checkboxes."
+                                : gmailConn.last_error || 'Gmail scope missing. Please disconnect and reconnect.'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="pt-1.5 border-t border-rose-200/60 flex items-center justify-between">
+                          <span className="text-[11px] text-rose-500">Action required to enable briefing emails</span>
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            className="h-7 text-xs bg-rose-600 hover:bg-rose-700 text-white rounded-lg px-2.5"
+                            onClick={async () => {
+                              try {
+                                const data = await connectionsApi.getGmailAuthUrl()
+                                const targetUrl = data?.url || data?.auth_url
+                                if (targetUrl) {
+                                  window.location.href = targetUrl
+                                }
+                              } catch (err: any) {
+                                addToast({
+                                  type: 'error',
+                                  title: 'OAuth Error',
+                                  description: err?.response?.data?.error || 'Failed to initiate Google login flow.',
+                                })
+                              }
+                            }}
+                          >
+                            Reconnect with Permissions
+                          </Button>
                         </div>
                       </div>
                     ) : isGmailConnected ? (
@@ -700,8 +733,8 @@ export const ConnectionsPage: React.FC = () => {
 
                   <Button
                     size="sm"
-                    variant={isGmailConnected ? 'outline' : 'primary'}
-                    className={isGmailConnected ? 'h-9 rounded-xl' : 'h-9 rounded-xl shadow-indigo'}
+                    variant={isGmailConnected && gmailConn?.status !== 'error' ? 'outline' : 'primary'}
+                    className={isGmailConnected && gmailConn?.status !== 'error' ? 'h-9 rounded-xl' : 'h-9 rounded-xl shadow-indigo'}
                     onClick={async () => {
                       try {
                         const data = await connectionsApi.getGmailAuthUrl()
@@ -724,7 +757,7 @@ export const ConnectionsPage: React.FC = () => {
                       }
                     }}
                   >
-                    {isGmailConnected ? 'Change Email' : 'Connect Gmail'}
+                    {isGmailConnected && gmailConn?.status !== 'error' ? 'Change Email' : isGmailConnected ? 'Reconnect Gmail' : 'Connect Gmail'}
                   </Button>
                 </div>
               </div>

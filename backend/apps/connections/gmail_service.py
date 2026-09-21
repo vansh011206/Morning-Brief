@@ -66,7 +66,8 @@ def get_gmail_auth_url(user_id: int = 0) -> str:
         'response_type': 'code',
         'scope': scope_str,
         'access_type': 'offline',
-        'prompt': 'consent',
+        'prompt': 'consent select_account',
+        'include_granted_scopes': 'true',
         'state': state,
     }
     encoded = requests.compat.urlencode(params)
@@ -188,7 +189,14 @@ def fetch_gmail_messages(connection_id: int) -> dict:
 
     if resp.status_code != 200:
         connection.status = Connection.Status.ERROR
-        connection.last_error = f"Gmail API error: {resp.status_code} {resp.text}"
+        error_body = resp.text
+        if 'ACCESS_TOKEN_SCOPE_INSUFFICIENT' in error_body or 'insufficient authentication scopes' in error_body.lower():
+            connection.last_error = (
+                "Insufficient Permissions: The 'Read all your email messages in Gmail' checkbox was not checked "
+                "during Google sign-in. Please click Reconnect and check all permission boxes to allow email briefing analysis."
+            )
+        else:
+            connection.last_error = f"Gmail API error: {resp.status_code} {error_body[:250]}"
         connection.save(update_fields=['status', 'last_error', 'updated_at'])
         return {'status': 'error', 'error': connection.last_error}
 

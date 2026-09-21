@@ -304,12 +304,26 @@ class GmailCallbackView(APIView):
         connection.is_active = True
         save_gmail_credentials(connection, token_data)
 
-        # Trigger async ingestion if celery available
-        try:
-            from .gmail_service import fetch_gmail_messages
-            fetch_gmail_messages(connection.id)
-        except Exception as e:
-            logger.warning(f"Initial Gmail sync failed: {e}")
+        # Check if Gmail scope was actually granted by the user
+        granted_scope = token_data.get('scope', '')
+        has_gmail_scope = (
+            'gmail.readonly' in granted_scope
+            or 'https://mail.google.com/' in granted_scope
+        )
+        if not has_gmail_scope:
+            connection.status = Connection.Status.ERROR
+            connection.last_error = (
+                "Insufficient Permissions: The 'Read all your email messages in Gmail' checkbox was not checked "
+                "during Google sign-in. Please click Reconnect and check all permission boxes to allow email briefing analysis."
+            )
+            connection.save(update_fields=['status', 'last_error', 'updated_at'])
+        else:
+            # Trigger async ingestion if celery available
+            try:
+                from .gmail_service import fetch_gmail_messages
+                fetch_gmail_messages(connection.id)
+            except Exception as e:
+                logger.warning(f"Initial Gmail sync failed: {e}")
 
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
 
